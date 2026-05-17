@@ -6,17 +6,43 @@ It provides config-driven environment creation, strict plugin validation, failur
 
 ## Install
 
+Clone the repo and install it into a local virtual environment:
+
 ```bash
+git clone git@github.com:Ian747-tw/MetaDrive-Experiment-Framework.git
+cd MetaDrive-Experiment-Framework
+
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-If using the provided MetaDrive environment:
+Or run the bootstrap helper:
 
 ```bash
-source ~/metadrive/.venv/bin/activate
-pip install -e ".[dev]"
+./scripts/bootstrap.sh
+source .venv/bin/activate
+```
+
+The `~/metadrive/.venv` environment used during development was only a local shortcut. New users should use the project-local `.venv` above unless they already maintain a separate MetaDrive environment.
+
+## Customize
+
+Most changes should happen in YAML configs or plugin classes:
+
+```text
+configs/train/fasb_ppo.yaml                  main FASB training settings
+configs/env/metadrive_debug.yaml             quick simulator settings
+configs/components/*                         reusable plugin configs
+examples/custom_plugins/                     examples to copy and edit
+```
+
+Create a custom plugin by adding a Python class and pointing YAML at it:
+
+```yaml
+cost_function:
+  _target_: examples.custom_plugins.cautious_distance_cost.CautiousDistanceCost
+  threshold: 5.0
 ```
 
 ## Quickstart
@@ -29,6 +55,15 @@ python scripts/train.py --config configs/train/fasb_ppo.yaml training.total_time
 python scripts/evaluate.py --config configs/eval/heldout_random.yaml eval.n_episodes=5
 python scripts/analyze_failures.py --run runs/fasb_ppo
 python scripts/benchmark.py --config configs/benchmark/final.yaml --dry-run
+```
+
+The same commands are available through `make`:
+
+```bash
+make validate
+make smoke
+make stress
+make benchmark-dry-run
 ```
 
 ## Configuration

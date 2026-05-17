@@ -1,8 +1,10 @@
 # Minimal Run
 
 ```bash
-source ~/metadrive/.venv/bin/activate
-pip install -e ".[dev]"
+git clone git@github.com:Ian747-tw/MetaDrive-Experiment-Framework.git
+cd MetaDrive-Experiment-Framework
+./scripts/bootstrap.sh
+source .venv/bin/activate
 python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
 python scripts/smoke_test_env.py --config configs/env/metadrive_debug.yaml
 python scripts/train.py --config configs/train/fasb_ppo.yaml training.total_timesteps=1000
