@@ -1,0 +1,7 @@
+experiment:
+  name: fasb_ppo_lagrangian_stretch
+  mode: fasb_ppo_lagrangian_stretch
+  seed: 42
+  output_dir: runs/fasb_ppo_lagrangian_stretch
+mode: fasb_ppo_lagrangian_stretch
+defaults_note: Stretch config currently uses the MVP adaptive penalty wrapper.

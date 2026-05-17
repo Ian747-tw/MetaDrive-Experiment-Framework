@@ -1,0 +1,3 @@
+_target_: fasb.plugins.sampler.UniformSampler
+start_seed: 0
+num_scenarios: 100

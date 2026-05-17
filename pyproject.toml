@@ -1,0 +1,33 @@
+[project]
+name = "fasb-metadrive"
+version = "0.1.0"
+description = "Failure-aware safety-budgeted experiment framework for MetaDrive and SB3."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "metadrive-simulator",
+  "stable-baselines3[extra]",
+  "gymnasium",
+  "hydra-core",
+  "omegaconf",
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "pyyaml",
+  "rich",
+  "tensorboard",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.setuptools.packages.find]
+include = ["fasb*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: requires MetaDrive/SB3 runtime"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

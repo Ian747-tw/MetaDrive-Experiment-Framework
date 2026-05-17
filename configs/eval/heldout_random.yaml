@@ -1,0 +1,22 @@
+experiment:
+  name: heldout_random_eval
+  seed: 42
+  output_dir: runs/heldout_random_eval
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 5000
+    num_scenarios: 50
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 200
+    log_level: 50
+algorithm:
+  checkpoint_path:
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+eval:
+  scenario_set: heldout_random
+  n_episodes: 10
+  deterministic: true

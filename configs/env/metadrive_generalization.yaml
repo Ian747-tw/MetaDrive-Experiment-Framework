@@ -1,0 +1,15 @@
+experiment:
+  name: metadrive_generalization
+  seed: 42
+  output_dir: runs/metadrive_generalization
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 1000
+    num_scenarios: 200
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    log_level: 50
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost

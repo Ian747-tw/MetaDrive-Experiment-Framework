@@ -1,0 +1,16 @@
+experiment:
+  name: metadrive_debug
+  seed: 7
+  output_dir: runs/metadrive_debug
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 0
+    num_scenarios: 2
+    traffic_density: 0.0
+    random_traffic: false
+    use_render: false
+    horizon: 50
+    log_level: 50
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost

@@ -1,0 +1,22 @@
+experiment:
+  name: base_explore
+  seed: 42
+  output_dir: runs/base_explore
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 0
+    num_scenarios: 50
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 200
+    log_level: 50
+algorithm:
+  checkpoint_path:
+failure_buffer:
+  max_size: 1000
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+eval:
+  n_episodes: 10

@@ -1,0 +1,5 @@
+experiment:
+  name: final_benchmark
+  seed: 42
+  output_dir: runs/final_benchmark
+methods: [base_eval, naive_ft, fixed_budget_ft, fasb_ppo]

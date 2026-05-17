@@ -1,0 +1,2 @@
+_target_: fasb.plugins.safety_budget.FixedSafetyBudget
+budget: 0.05

@@ -1,0 +1,22 @@
+experiment:
+  name: heldout_failure_modes_eval
+  seed: 42
+  output_dir: runs/heldout_failure_modes_eval
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 8000
+    num_scenarios: 50
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 200
+    log_level: 50
+algorithm:
+  checkpoint_path:
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+eval:
+  scenario_set: heldout_failure_modes
+  n_episodes: 10
+  deterministic: true

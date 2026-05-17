@@ -1,0 +1,58 @@
+experiment:
+  name: fixed_budget_ft
+  mode: fixed_budget_ft
+  seed: 42
+  output_dir: runs/fixed_budget_ft
+mode: fixed_budget_ft
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 1000
+    num_scenarios: 200
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 1000
+    log_level: 50
+vec_env:
+  type: dummy
+  n_envs: 1
+  start_method: forkserver
+algorithm:
+  backend: sb3
+  name: PPO
+  policy: MlpPolicy
+  checkpoint_path:
+  params:
+    learning_rate: 0.0001
+    n_steps: 128
+    batch_size: 64
+    gamma: 0.99
+    verbose: 0
+training:
+  total_timesteps: 1000
+  save_every_steps: 500
+failure_buffer:
+  path: runs/base_explore/buffers/failure_buffer.jsonl
+  max_size: 1000
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+failure_scorer:
+  _target_: fasb.plugins.failure_scorer.DefaultFailureScorer
+failure_classifier:
+  _target_: fasb.plugins.failure_classifier.DefaultFailureClassifier
+safety_budget:
+  _target_: fasb.plugins.safety_budget.FixedSafetyBudget
+  budget: 0.05
+penalty_scheduler:
+  _target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler
+  lambda_min: 1.0
+  lambda_max: 1.0
+sampler:
+  _target_: fasb.plugins.sampler.MixedFailureSampler
+  start_seed: 1000
+  num_scenarios: 200
+  failure_ratio: 0.6
+  alpha: 0.7
+eval:
+  n_episodes: 20
