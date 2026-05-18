@@ -4,50 +4,57 @@ experiment:
   seed: 42
   output_dir: runs/naive_ft
 mode: naive_ft
+
 metadrive:
   env_class: metadrive.envs.MetaDriveEnv
   config:
     start_seed: 1000
-    num_scenarios: 200
+    num_scenarios: 1000
     traffic_density: 0.1
     random_traffic: true
     use_render: false
     horizon: 1000
     log_level: 50
+    crash_vehicle_done: false
+    crash_object_done: false
+    out_of_road_done: false
+
 vec_env:
-  type: dummy
-  n_envs: 1
+  type: subproc
+  n_envs: 4
   start_method: forkserver
+
 algorithm:
   backend: sb3
   name: PPO
   policy: MlpPolicy
   checkpoint_path:
   params:
-    learning_rate: 0.0001
-    n_steps: 128
-    batch_size: 64
+    learning_rate: "linear:3.0e-4"
+    n_steps: 2048
+    batch_size: 256
+    n_epochs: 10
     gamma: 0.99
-    verbose: 0
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.0
+    vf_coef: 0.5
+    max_grad_norm: 0.5
+    verbose: 1
+    policy_kwargs:
+      net_arch: [256, 256]
+
 training:
-  total_timesteps: 1000
-  save_every_steps: 500
+  total_timesteps: 1_000_000
+  save_every_steps: 100_000
+
 cost_function:
   _target_: fasb.plugins.cost.DefaultDrivingCost
-failure_scorer:
-  _target_: fasb.plugins.failure_scorer.DefaultFailureScorer
-failure_classifier:
-  _target_: fasb.plugins.failure_classifier.DefaultFailureClassifier
-safety_budget:
-  _target_: fasb.plugins.safety_budget.FixedSafetyBudget
-penalty_scheduler:
-  _target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler
+
 sampler:
   _target_: fasb.plugins.sampler.UniformSampler
   start_seed: 1000
-  num_scenarios: 200
-failure_buffer:
-  path: runs/base_explore/buffers/failure_buffer.jsonl
-  max_size: 1000
+  num_scenarios: 1000
+
 eval:
-  n_episodes: 20
+  n_episodes: 200
