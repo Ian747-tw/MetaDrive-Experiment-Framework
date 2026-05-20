@@ -11,6 +11,7 @@ from fasb.envs.metadrive_factory import make_metadrive_env
 from fasb.envs.wrappers import CostFunctionWrapper, RandomPolicy
 from fasb.evaluation.metrics import summarize_episode_records
 from fasb.evaluation.scenario_sets import scenario_seeds
+from fasb.failure.record_utils import build_training_scenario_record
 from fasb.plugins.failure_classifier import DefaultFailureClassifier
 from fasb.plugins.failure_scorer import DefaultFailureScorer
 from fasb.schemas.records import EpisodeRecord
@@ -27,11 +28,12 @@ def extract_episode_record(
     info: dict[str, Any],
 ) -> dict[str, Any]:
     scenario = info.get("fasb_scenario", {})
+    scenario_record = build_training_scenario_record(info)
     record = EpisodeRecord(
         run_id=run_id,
         episode_id=episode_id,
-        seed=scenario.get("seed"),
-        scenario_id=scenario.get("scenario_id"),
+        seed=scenario_record.get("seed"),
+        scenario_id=scenario_record.get("scenario_id"),
         reward=float(reward),
         modified_reward=modified_reward,
         cost=float(cost),
@@ -41,11 +43,16 @@ def extract_episode_record(
         timeout=bool(info.get("timeout", info.get("max_step", False))),
         route_completion=float(info.get("route_completion", info.get("route_completion_rate", 0.0)) or 0.0),
         episode_length=int(length),
-        traffic_density=scenario.get("traffic_density"),
+        traffic_density=scenario_record.get("traffic_density"),
         safety_budget=info.get("fasb_budget"),
         penalty_coef=info.get("fasb_penalty_coef"),
         min_vehicle_distance=info.get("min_vehicle_distance"),
-        metadata={"scenario_source": scenario.get("source"), **dict(scenario.get("metadata", {}))},
+        metadata={
+            "scenario_source": scenario_record.get("scenario_source", scenario_record.get("source")),
+            "scenario_priority": scenario_record.get("scenario_priority", scenario_record.get("priority")),
+            "budget_mode": info.get("fasb_budget_mode"),
+            **dict(scenario_record.get("metadata", {})),
+        },
     ).to_dict()
     scorer = DefaultFailureScorer()
     classifier = DefaultFailureClassifier()
