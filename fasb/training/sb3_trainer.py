@@ -15,6 +15,14 @@ from fasb.training.callbacks import EpisodeJSONLCallback, checkpoint_callback
 from fasb.utils.seed import seed_everything
 
 
+def _coerce_schedule(value: Any) -> Any:
+    # "linear:3e-4" → SB3 schedule that decays peak → 0 over training.
+    if isinstance(value, str) and value.startswith("linear:"):
+        peak = float(value.split(":", 1)[1])
+        return lambda frac: float(frac) * peak
+    return value
+
+
 class SB3Trainer:
     def __init__(self, config: DictConfig | dict[str, Any]) -> None:
         self.config = OmegaConf.create(config)
@@ -54,8 +62,14 @@ class SB3Trainer:
 
     def _build_sampler(self, rank: int):
         mode = self.config.get("mode", self.config.experiment.get("mode", "fasb_ppo"))
-        start_seed = int(self.config.metadrive.config.get("start_seed", 0)) + rank * 10000
-        num_scenarios = int(self.config.metadrive.config.get("num_scenarios", 100))
+        base_seed = int(self.config.metadrive.config.get("start_seed", 0))
+        total_scenarios = int(self.config.metadrive.config.get("num_scenarios", 100))
+        n_envs = max(int(self.config.vec_env.get("n_envs", 1)), 1)
+        # Shard the configured scenario range across workers so each rank samples
+        # a disjoint shard while staying inside MetaDrive's baked valid seed range.
+        shard = max(total_scenarios // n_envs, 1)
+        start_seed = base_seed + rank * shard
+        num_scenarios = shard
         if mode in {"fixed_budget_ft", "fasb_ppo", "fasb_ppo_lagrangian_stretch"}:
             failure_path = self.config.get("failure_buffer", {}).get("path")
             return MixedFailureSampler(
@@ -71,7 +85,9 @@ class SB3Trainer:
         mode = self.config.get("mode", self.config.experiment.get("mode", "fasb_ppo"))
         wrappers: list[tuple[Any, dict[str, Any]]] = []
         cost = instantiate_from_config(self.config.get("cost_function")) if self.config.get("cost_function") else None
-        if cost is not None and mode in {"fixed_budget_ft", "fasb_ppo", "fasb_ppo_lagrangian_stretch"}:
+        # Cost is read-only signal; attach for every mode so naive_ft can log info["fasb_cost"]
+        # for downstream failure mining without applying any reward shaping.
+        if cost is not None:
             wrappers.append((CostFunctionWrapper, {"cost_function": cost}))
         if mode in {"fixed_budget_ft", "fasb_ppo", "fasb_ppo_lagrangian_stretch"}:
             wrappers.append(
@@ -93,5 +109,8 @@ class SB3Trainer:
         checkpoint_path = self.config.algorithm.get("checkpoint_path")
         if checkpoint_path and Path(str(checkpoint_path)).exists():
             return PPO.load(str(checkpoint_path), env=env)
-        params = OmegaConf.to_container(self.config.algorithm.get("params", {}), resolve=True)
+        params = OmegaConf.to_container(self.config.algorithm.get("params", {}), resolve=True) or {}
+        for key in ("learning_rate", "clip_range", "clip_range_vf"):
+            if key in params:
+                params[key] = _coerce_schedule(params[key])
         return PPO(self.config.algorithm.get("policy", "MlpPolicy"), env, **params)
