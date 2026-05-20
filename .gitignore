@@ -6,3 +6,11 @@ __pycache__/
 .mypy_cache/
 runs/
 checkpoints/
+.venv/
+wandb/
+tensorboard/
+runs/**/*.zip
+checkpoints/**/*.zip
+*.pt
+*.pth
+*.ckpt
