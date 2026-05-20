@@ -39,9 +39,11 @@ def build_episode_log_record(info: dict[str, Any], episode_id: int) -> dict[str,
     monitor_episode = info.get("episode", {})
     if not isinstance(monitor_episode, dict):
         monitor_episode = {}
+    scenario_episode_id = scenario.get("episode_id")
 
     record = {
-        "episode_id": info.get("episode_id", scenario.get("episode_id", episode_id)),
+        "episode_id": episode_id,
+        "scenario_episode_id": scenario_episode_id,
         "seed": info.get("seed", scenario.get("seed", metadata.get("seed"))),
         "scenario_id": info.get("scenario_id", scenario.get("scenario_id", metadata.get("scenario_id"))),
         "scenario_source": info.get("scenario_source", scenario.get("source", metadata.get("source"))),

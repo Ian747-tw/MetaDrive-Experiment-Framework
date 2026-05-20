@@ -104,6 +104,7 @@ def test_uniform_sampler_config_target_and_sharding(tmp_path) -> None:
             "mode": "naive_ft",
             "metadrive": {"config": {"start_seed": 100, "num_scenarios": 10}},
             "vec_env": {"n_envs": 3},
+            "failure_buffer": {"path": str(tmp_path / "unused.jsonl")},
             "sampler": {"_target_": "fasb.plugins.sampler.UniformSampler"},
         }
     )
@@ -137,7 +138,13 @@ def test_safe_call_component_logs_and_reraises(tmp_path) -> None:
 def test_build_episode_log_record_rich_fields_and_missing_optional_keys() -> None:
     record = build_episode_log_record(
         {
-            "fasb_scenario": {"seed": 5, "scenario_id": "seed_5", "source": "failure_buffer", "priority": 0.7},
+            "fasb_scenario": {
+                "episode_id": 1,
+                "seed": 5,
+                "scenario_id": "seed_5",
+                "source": "failure_buffer",
+                "priority": 0.7,
+            },
             "success": False,
             "collision": True,
             "route_completion": 0.25,
@@ -155,6 +162,8 @@ def test_build_episode_log_record_rich_fields_and_missing_optional_keys() -> Non
         },
         9,
     )
+    assert record["episode_id"] == 9
+    assert record["scenario_episode_id"] == 1
     assert record["seed"] == 5
     assert record["scenario_source"] == "failure_buffer"
     assert record["collision"] is True

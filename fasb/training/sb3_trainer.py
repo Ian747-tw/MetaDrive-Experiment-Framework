@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
-from fasb.core.imports import instantiate_from_config
+from fasb.core.imports import import_string, instantiate_from_config
 from fasb.core.run_dir import create_run_dir
 from fasb.envs.metadrive_factory import make_metadrive_env
 from fasb.envs.vec_env import make_vec_env
@@ -21,6 +22,15 @@ def _coerce_schedule(value: Any) -> Any:
         peak = float(value.split(":", 1)[1])
         return lambda frac: float(frac) * peak
     return value
+
+
+def _accepts_kwarg(target_path: str, kwarg: str) -> bool:
+    target = import_string(target_path)
+    signature = inspect.signature(target)
+    return kwarg in signature.parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
 
 
 class SB3Trainer:
@@ -92,7 +102,8 @@ class SB3Trainer:
             cfg = OmegaConf.create(OmegaConf.to_container(sampler_cfg, resolve=True))
             cfg.start_seed = start_seed
             cfg.num_scenarios = num_scenarios
-            if "failure_buffer_path" not in cfg:
+            target_path = str(cfg.get("_target_"))
+            if "failure_buffer_path" not in cfg and _accepts_kwarg(target_path, "failure_buffer_path"):
                 failure_path = self.config.get("failure_buffer", {}).get("path")
                 if failure_path:
                     cfg.failure_buffer_path = failure_path
