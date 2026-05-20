@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -8,19 +9,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+RUN_ROOT = ROOT / "runs" / "e2e_stress"
 KNOWN_RUN_DIRS = [
-    ROOT / "runs" / "base_explore",
-    ROOT / "runs" / "fasb_ppo",
-    ROOT / "runs" / "heldout_random_eval",
+    RUN_ROOT / "base_explore",
+    RUN_ROOT / "fasb_ppo",
+    RUN_ROOT / "heldout_random_eval",
 ]
 EXPECTED_FILES = [
-    ROOT / "runs" / "base_explore" / "buffers" / "failure_buffer.jsonl",
-    ROOT / "runs" / "fasb_ppo" / "checkpoints" / "final.zip",
-    ROOT / "runs" / "fasb_ppo" / "logs" / "episodes.jsonl",
-    ROOT / "runs" / "heldout_random_eval" / "eval" / "heldout_random.csv",
-    ROOT / "runs" / "heldout_random_eval" / "analysis" / "failure_summary.csv",
-    ROOT / "runs" / "heldout_random_eval" / "analysis" / "failure_by_mode.csv",
-    ROOT / "runs" / "heldout_random_eval" / "analysis" / "paper_numbers.md",
+    RUN_ROOT / "base_explore" / "buffers" / "failure_buffer.jsonl",
+    RUN_ROOT / "fasb_ppo" / "checkpoints" / "final.zip",
+    RUN_ROOT / "fasb_ppo" / "logs" / "episodes.jsonl",
+    RUN_ROOT / "heldout_random_eval" / "eval" / "heldout_random.csv",
+    RUN_ROOT / "heldout_random_eval" / "analysis" / "failure_summary.csv",
+    RUN_ROOT / "heldout_random_eval" / "analysis" / "failure_by_mode.csv",
+    RUN_ROOT / "heldout_random_eval" / "analysis" / "paper_numbers.md",
 ]
 
 
@@ -62,6 +64,15 @@ def count_lines(path: Path) -> int:
         return sum(1 for _ in handle)
 
 
+def read_jsonl(path: Path) -> list[dict]:
+    records = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                records.append(json.loads(line))
+    return records
+
+
 def verify_outputs() -> None:
     stage("Verify Expected Outputs")
     missing = [path for path in EXPECTED_FILES if not path.exists()]
@@ -70,9 +81,9 @@ def verify_outputs() -> None:
         raise SystemExit(f"Missing expected output files:\n{formatted}")
 
     nonempty_files = [
-        ROOT / "runs" / "base_explore" / "buffers" / "failure_buffer.jsonl",
-        ROOT / "runs" / "fasb_ppo" / "logs" / "episodes.jsonl",
-        ROOT / "runs" / "heldout_random_eval" / "analysis" / "paper_numbers.md",
+        RUN_ROOT / "base_explore" / "buffers" / "failure_buffer.jsonl",
+        RUN_ROOT / "fasb_ppo" / "logs" / "episodes.jsonl",
+        RUN_ROOT / "heldout_random_eval" / "analysis" / "paper_numbers.md",
     ]
     for path in nonempty_files:
         size = path.stat().st_size
@@ -80,14 +91,23 @@ def verify_outputs() -> None:
             raise SystemExit(f"Expected non-empty file: {path.relative_to(ROOT)}")
 
     line_checks = [
-        ROOT / "runs" / "base_explore" / "buffers" / "failure_buffer.jsonl",
-        ROOT / "runs" / "fasb_ppo" / "logs" / "episodes.jsonl",
+        RUN_ROOT / "base_explore" / "buffers" / "failure_buffer.jsonl",
+        RUN_ROOT / "fasb_ppo" / "logs" / "episodes.jsonl",
     ]
     for path in line_checks:
         lines = count_lines(path)
         if lines < 1:
             raise SystemExit(f"Expected at least one line in {path.relative_to(ROOT)}")
         print(f"{path.relative_to(ROOT)}: {lines} line(s)")
+
+    failure_records = read_jsonl(RUN_ROOT / "base_explore" / "buffers" / "failure_buffer.jsonl")
+    if not any(record.get("seed") is not None for record in failure_records):
+        raise SystemExit("Expected at least one failure-buffer record with a concrete seed")
+
+    training_records = read_jsonl(RUN_ROOT / "fasb_ppo" / "logs" / "episodes.jsonl")
+    if not any(record.get("scenario_source") == "failure_buffer" for record in training_records):
+        raise SystemExit("Expected training to consume at least one failure-buffer scenario")
+    print("Verified training consumed a failure-buffer scenario.")
 
     print("All expected stress outputs are present.")
 
@@ -133,7 +153,11 @@ def main() -> int:
             "scripts/explore_failures.py",
             "--config",
             "configs/explore/base_checkpoint.yaml",
+            "experiment.name=e2e_stress_base_explore",
+            "experiment.output_dir=runs/e2e_stress/base_explore",
             "eval.n_episodes=2",
+            "metadrive.config.start_seed=1000",
+            "metadrive.config.num_scenarios=200",
             "metadrive.config.horizon=50",
         ]
     )
@@ -145,6 +169,9 @@ def main() -> int:
             "scripts/train.py",
             "--config",
             "configs/train/fasb_ppo.yaml",
+            "experiment.name=e2e_stress_fasb_ppo",
+            "experiment.output_dir=runs/e2e_stress/fasb_ppo",
+            "failure_buffer.path=runs/e2e_stress/base_explore/buffers/failure_buffer.jsonl",
             "training.total_timesteps=32",
             "algorithm.params.n_steps=16",
             "algorithm.params.batch_size=16",
@@ -152,6 +179,7 @@ def main() -> int:
             "vec_env.type=dummy",
             "vec_env.n_envs=1",
             "algorithm.params.device=cpu",
+            "sampler.failure_ratio=1.0",
         ]
     )
 
@@ -163,7 +191,9 @@ def main() -> int:
             "--config",
             "configs/eval/heldout_random.yaml",
             "--checkpoint",
-            "runs/fasb_ppo/checkpoints/final.zip",
+            "runs/e2e_stress/fasb_ppo/checkpoints/final.zip",
+            "experiment.name=e2e_stress_heldout_random_eval",
+            "experiment.output_dir=runs/e2e_stress/heldout_random_eval",
             "eval.n_episodes=2",
             "metadrive.config.horizon=30",
             "algorithm.params.device=cpu",
@@ -171,7 +201,7 @@ def main() -> int:
     )
 
     stage("Analyze Failure Outputs")
-    run_command([sys.executable, "scripts/analyze_failures.py", "--run", "runs/heldout_random_eval"])
+    run_command([sys.executable, "scripts/analyze_failures.py", "--run", "runs/e2e_stress/heldout_random_eval"])
 
     verify_outputs()
     return 0

@@ -46,14 +46,17 @@ class ScenarioMetadataWrapper(BaseWrapper):
         self.scenario_sampler = scenario_sampler
         self.run_context = run_context or {}
         self.current_sample = None
+        self.current_reset_seed = None
         self.episode_id = -1
 
     def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         self.episode_id += 1
+        self.current_reset_seed = kwargs.get("seed")
         if self.scenario_sampler is not None:
             sample = self.scenario_sampler.next()
             self.current_sample = sample
             kwargs.setdefault("seed", sample.seed)
+            self.current_reset_seed = kwargs.get("seed")
             if hasattr(self.env, "config") and isinstance(getattr(self.env, "config"), dict):
                 self.env.config["start_seed"] = sample.seed
         result = self.env.reset(**kwargs)
@@ -83,7 +86,7 @@ class ScenarioMetadataWrapper(BaseWrapper):
             source = self.current_sample.source
             priority = self.current_sample.priority
             metadata = dict(self.current_sample.metadata)
-        seed = seed if seed is not None else info.get("seed", info.get("scenario_seed"))
+        seed = seed if seed is not None else info.get("seed", info.get("scenario_seed", self.current_reset_seed))
         scenario_id = info.get("scenario_id") or (f"seed_{seed}" if seed is not None else None)
         return {
             "episode_id": self.episode_id,

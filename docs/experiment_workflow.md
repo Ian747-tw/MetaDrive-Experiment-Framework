@@ -126,7 +126,7 @@ For quick local verification, run:
 python scripts/run_e2e_stress.py --clean-runs
 ```
 
-The stress settings are intentionally tiny. Do not use them as experiment results.
+The stress settings are intentionally tiny and write to `runs/e2e_stress/`. Do not use them as experiment results.
 
 ## What Not To Commit
 

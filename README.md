@@ -82,6 +82,7 @@ make test
 ```
 
 `make stress` keeps the shorter command sequence. `make e2e-stress` runs the checked Python E2E stress script and cleans only the known stress run directories.
+The E2E stress script writes to `runs/e2e_stress/` so it does not remove canonical experiment outputs such as `runs/fasb_ppo/`.
 
 ## Minimal Workflow
 
