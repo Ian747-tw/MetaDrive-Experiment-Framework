@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  framework:
+    name: Framework checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lightweight dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . --no-deps
+          python -m pip install pytest omegaconf hydra-core numpy pandas matplotlib pyyaml rich
+
+      - name: Compile framework and tests
+        run: python -m compileall fasb tests -q
+
+      - name: Run lightweight tests
+        run: |
+          python -m pytest \
+            tests/test_component_validation.py \
+            tests/test_failure_buffer.py \
+            tests/test_metrics.py \
+            tests/test_training_stability_patch.py \
+            tests/test_plugin_loading.py \
+            tests/test_run_dir.py \
+            -q
+
+      - name: Validate configured components
+        run: python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
+
+  metadrive-smoke:
+    name: Manual MetaDrive smoke
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install full dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e .
+
+      - name: Check environment
+        run: python scripts/check_env.py --require-metadrive
+
+      - name: Run MetaDrive smoke
+        run: python scripts/smoke_test_env.py --config configs/env/metadrive_debug.yaml

@@ -1,215 +1,140 @@
 # FASB MetaDrive
 
-FASB MetaDrive is a lightweight experiment framework for failure-aware, safety-budgeted fine-tuning of MetaDrive driving policies with Stable-Baselines3.
+FASB MetaDrive is a lightweight experiment framework for failure-aware fine-tuning of MetaDrive driving policies with Stable-Baselines3 PPO.
 
-The framework is meant to be cloned, configured, and extended. Most users should customize YAML configs and small plugin classes instead of editing the training loop.
+The repo is meant to be cloned or pulled, installed into a compatible Python environment, and used directly for experiments. Teammates should usually customize YAML configs and plugin classes, not edit the training loop.
 
-The current main method is **FASB-PPO: SB3 PPO + failure-aware sampler + adaptive safety penalty**. It is an adaptive reward-penalty PPO workflow, not a full PPO-Lagrangian implementation. PPO-Lagrangian with a learned multiplier update is a stretch/future direction unless that update is explicitly implemented.
+## What This Is
 
-It provides:
+- A reproducible MetaDrive experiment scaffold.
+- A config-driven SB3 PPO training pipeline.
+- Failure exploration, failure-buffer construction, evaluation, and analysis tooling.
+- A plugin system for research ideas around costs, failure scoring, budgets, penalties, and sampling.
 
-- MetaDrive environment construction with pass-through simulator config
-- Strict plugin validation for costs, failure scoring, failure labels, safety budgets, penalties, and samplers
-- Failure exploration and JSONL failure buffers
-- SB3 PPO training and checkpointing
-- Shared evaluation, metrics, and failure analysis outputs
+## What This Is Not
 
-It does not provide a custom PPO implementation, a dashboard, a database server, distributed training, or a full RL library.
+- Not a custom PPO implementation.
+- Not a full PPO-Lagrangian implementation.
+- Not a general RL framework, dashboard, database service, or distributed trainer.
 
-## First-Time Setup
+## Current Method
 
-Clone the repo:
+The current implemented method is:
 
-```bash
-git clone git@github.com:Ian747-tw/MetaDrive-Experiment-Framework.git
-cd MetaDrive-Experiment-Framework
+```text
+FASB-PPO = SB3 PPO + failure-aware sampler + adaptive safety penalty
 ```
 
-Create a project-local Python environment and install the framework:
+This is adaptive reward-penalty PPO. Full PPO-Lagrangian with a learned multiplier update is future/stretch work unless that update is explicitly implemented.
+
+## Installation
+
+### A. Recommended: Existing MetaDrive Venv
+
+Use this path if you already have a MetaDrive-compatible environment.
 
 ```bash
-./scripts/bootstrap.sh
+cd ~/metadrive
 source .venv/bin/activate
+cd ~/projects/MetaDrive-Experiment-Framework
+pip install -e . --no-deps
+python scripts/check_env.py --require-metadrive
 ```
 
-Why two commands?
+`--no-deps` keeps pip from reinstalling MetaDrive or old transitive dependencies inside a venv that already works.
 
-- `./scripts/bootstrap.sh` creates `.venv` and installs this project plus dependencies.
-- `source .venv/bin/activate` activates that environment in your current terminal. Shell activation inside a script cannot persist after the script exits.
+### B. Fresh Setup
 
-For later terminal sessions, only run:
+Use Python 3.10 or 3.11 if possible. Python 3.12 may fail because `metadrive-simulator` can pull `gym==0.19.0`, which has known packaging issues on newer Python environments.
 
 ```bash
+python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+pip install -e .
+python scripts/check_env.py --require-metadrive
 ```
 
-## Recommended Workflow
+If `pip install -e .` fails on MetaDrive or Gym, do not hide the failure. Use a MetaDrive-compatible environment, or install dependencies manually with compatible pins for your machine.
 
-Run this sequence when starting a new experiment:
+## First Validation Commands
+
+Run these after installing or pulling major changes:
 
 ```bash
+python scripts/check_env.py --require-metadrive
+python -m pytest tests/test_component_validation.py tests/test_failure_buffer.py tests/test_metrics.py tests/test_training_stability_patch.py -q
+python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
+python scripts/smoke_test_env.py --config configs/env/metadrive_debug.yaml
+python scripts/run_e2e_stress.py --clean-runs
+```
+
+Useful Make targets:
+
+```bash
+make check-env
+make check-env-metadrive
 make validate
 make smoke
+make stress
+make e2e-stress
+make test
+```
+
+`make stress` keeps the shorter command sequence. `make e2e-stress` runs the checked Python E2E stress script and cleans only the known stress run directories.
+The E2E stress script writes to `runs/e2e_stress/` so it does not remove canonical experiment outputs such as `runs/fasb_ppo/`.
+
+## Minimal Workflow
+
+```bash
 python scripts/explore_failures.py --config configs/explore/base_checkpoint.yaml
 python scripts/train.py --config configs/train/fasb_ppo.yaml
 python scripts/evaluate.py --config configs/eval/heldout_random.yaml --checkpoint runs/fasb_ppo/checkpoints/final.zip
 python scripts/analyze_failures.py --run runs/heldout_random_eval
 ```
 
-For a short end-to-end stress run:
-
-```bash
-make stress
-```
-
-For a dry run of the full benchmark sequence:
-
-```bash
-make benchmark-dry-run
-```
-
-## Tool Commands
-
-### Validate Plugins
-
-Checks that configured plugins instantiate correctly and return valid outputs.
-
-```bash
-python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
-```
-
-Shortcut:
-
-```bash
-make validate
-```
-
-Use this after changing any plugin or `_target_` path.
-
-### Smoke-Test MetaDrive
-
-Creates a MetaDrive env, resets it, takes one action, applies wrappers, and checks `DummyVecEnv`.
-
-```bash
-python scripts/smoke_test_env.py --config configs/env/metadrive_debug.yaml
-```
-
-Shortcut:
-
-```bash
-make smoke
-```
-
-Use this after changing `metadrive.config`, env wrappers, or environment setup.
-
-### Explore Failures
-
-Runs a checkpoint or random policy through scenarios, writes episode logs, scores failures, and creates a failure buffer.
-
-```bash
-python scripts/explore_failures.py --config configs/explore/base_checkpoint.yaml
-```
-
-Outputs:
+Expected primary outputs:
 
 ```text
-runs/base_explore/logs/episodes.jsonl
 runs/base_explore/buffers/failure_buffer.jsonl
-```
-
-For a quick run:
-
-```bash
-python scripts/explore_failures.py --config configs/explore/base_checkpoint.yaml eval.n_episodes=5 metadrive.config.horizon=100
-```
-
-### Train
-
-Runs SB3 PPO with the configured experiment mode.
-
-```bash
-python scripts/train.py --config configs/train/fasb_ppo.yaml
-```
-
-Outputs:
-
-```text
-runs/fasb_ppo/config_resolved.yaml
-runs/fasb_ppo/logs/episodes.jsonl
 runs/fasb_ppo/checkpoints/final.zip
-```
-
-For a quick sanity run:
-
-```bash
-python scripts/train.py --config configs/train/fasb_ppo.yaml training.total_timesteps=1000 vec_env.n_envs=1
-```
-
-### Evaluate
-
-Evaluates a checkpoint with the shared evaluator.
-
-```bash
-python scripts/evaluate.py \
-  --config configs/eval/heldout_random.yaml \
-  --checkpoint runs/fasb_ppo/checkpoints/final.zip
-```
-
-Output:
-
-```text
+runs/fasb_ppo/logs/episodes.jsonl
 runs/heldout_random_eval/eval/heldout_random.csv
+runs/heldout_random_eval/analysis/
 ```
 
-### Analyze
+See [docs/experiment_workflow.md](docs/experiment_workflow.md) for a one-page teammate guide covering baselines, FASB-PPO, evaluation, and comparison outputs.
 
-Generates tables and paper-number summaries from run logs.
+## Quick Overrides
+
+Hydra-style CLI overrides let you change settings without editing YAML:
 
 ```bash
-python scripts/analyze_failures.py --run runs/heldout_random_eval
+python scripts/train.py \
+  --config configs/train/fasb_ppo.yaml \
+  training.total_timesteps=10000 \
+  vec_env.type=dummy \
+  vec_env.n_envs=1 \
+  algorithm.params.device=cpu
 ```
 
-Outputs:
+`training.total_timesteps=32` is only for stress tests. Real experiments need larger budgets and multiple seeds.
+
+## Configs
+
+Start with YAML configs:
 
 ```text
-runs/heldout_random_eval/analysis/failure_summary.csv
-runs/heldout_random_eval/analysis/failure_by_mode.csv
-runs/heldout_random_eval/analysis/paper_numbers.md
+configs/explore/base_checkpoint.yaml
+configs/train/naive_ft.yaml
+configs/train/fixed_budget_ft.yaml
+configs/train/fasb_ppo.yaml
+configs/eval/heldout_random.yaml
+configs/benchmark/final.yaml
+configs/components/
 ```
 
-### Benchmark
-
-Prints or runs the full benchmark sequence.
-
-```bash
-python scripts/benchmark.py --config configs/benchmark/final.yaml --dry-run
-```
-
-Shortcut:
-
-```bash
-make benchmark-dry-run
-```
-
-## Customizing Experiments
-
-Start with YAML configs. You usually do not need to edit Python code for common experiment changes.
-
-Important config files:
-
-```text
-configs/env/metadrive_debug.yaml             small env smoke-test config
-configs/env/metadrive_generalization.yaml    larger generalization env config
-configs/explore/base_checkpoint.yaml         failure discovery config
-configs/train/naive_ft.yaml                  baseline fine-tuning config
-configs/train/fixed_budget_ft.yaml           fixed safety penalty baseline
-configs/train/fasb_ppo.yaml                  main FASB-PPO config
-configs/eval/heldout_random.yaml             heldout evaluation config
-configs/benchmark/final.yaml                 benchmark sequence config
-configs/components/*                         reusable plugin configs
-```
-
-MetaDrive settings must stay under:
+MetaDrive settings live under:
 
 ```yaml
 metadrive:
@@ -222,163 +147,53 @@ metadrive:
     use_render: false
 ```
 
-Everything under `metadrive.config` is passed to MetaDrive directly.
+Everything under `metadrive.config` is passed directly to MetaDrive.
 
-You can override config values from the command line:
+## Plugins
 
-```bash
-python scripts/train.py \
-  --config configs/train/fasb_ppo.yaml \
-  training.total_timesteps=5000 \
-  metadrive.config.traffic_density=0.2 \
-  safety_budget.d_min=0.01
-```
-
-## Customizing Plugins
-
-Plugins are small Python classes referenced from YAML with `_target_`.
-
-Built-in plugin types:
+Built-in research extension points:
 
 ```text
-cost_function          computes safety cost per step
-failure_scorer         scores episode failure severity
-failure_classifier     assigns failure mode labels
-safety_budget          chooses scenario safety budget
-penalty_scheduler      converts risk/budget into reward penalty
-sampler                chooses scenario seeds
+cost_function
+failure_scorer
+failure_classifier
+safety_budget
+penalty_scheduler
+sampler
 ```
 
-Built-in implementations live in:
+Plugins are Python classes loaded from YAML `_target_` fields. Plugin outputs must return dataclasses from `fasb.schemas.outputs`; invalid outputs fail fast during validation or runtime checks. Plugin errors are logged under `runs/<experiment>/errors/`.
 
-```text
-fasb/plugins/cost.py
-fasb/plugins/failure_scorer.py
-fasb/plugins/failure_classifier.py
-fasb/plugins/safety_budget.py
-fasb/plugins/penalty_scheduler.py
-fasb/plugins/sampler.py
-```
+Read [examples/plugin_authoring.md](examples/plugin_authoring.md) before adding a plugin.
 
-Example custom plugins live in:
-
-```text
-examples/custom_plugins/
-```
-
-To use a custom cost function:
-
-```yaml
-cost_function:
-  _target_: examples.custom_plugins.cautious_distance_cost.CautiousDistanceCost
-  threshold: 5.0
-```
-
-Then validate it:
+Validate changes with:
 
 ```bash
 python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
 ```
 
-Plugin outputs are validated before they affect training. Invalid outputs raise `ComponentValidationError` instead of silently continuing.
+## Tests And CI
 
-More examples are in:
+Default CI intentionally avoids installing MetaDrive. It installs the framework with `--no-deps`, adds lightweight test dependencies, compiles `fasb` and `tests`, runs component/plugin/config tests, and validates the FASB-PPO config.
 
-```text
-examples/plugin_authoring.md
-```
-
-### What Is Config-Driven?
-
-The training loop stays small and delegates experiment behavior to configured components. These are plugin-driven through YAML `_target_` entries:
-
-- `cost_function`
-- `failure_scorer`
-- `failure_classifier`
-- `safety_budget`
-- `penalty_scheduler`
-- `sampler`
-
-Sampler construction is also config-driven: `sampler._target_` chooses the sampler class, while the trainer injects runtime seed shards and the configured failure-buffer path when needed.
-
-### Error Logs
-
-Plugin failures are fail-fast, but the framework writes context first. During training, wrapper plugin errors are recorded under:
-
-```text
-runs/<experiment>/errors/plugin_errors.jsonl
-runs/<experiment>/errors/plugin_errors.log
-```
-
-The JSONL file is intended for scripted inspection. The `.log` file contains readable tracebacks for debugging.
-
-## Output Structure
-
-Each run writes a resolved config and artifacts:
-
-```text
-runs/<experiment>/
-  config_resolved.yaml
-  metadata.json
-  checkpoints/
-    final.zip
-  logs/
-    episodes.jsonl
-  buffers/
-    failure_buffer.jsonl
-  errors/
-    plugin_errors.jsonl
-    plugin_errors.log
-  eval/
-    heldout_random.csv
-  analysis/
-    failure_summary.csv
-    failure_by_mode.csv
-    paper_numbers.md
-```
-
-Generated `runs/` data is ignored by git.
-
-## Common Development Checks
+Local MetaDrive checks are still required before running real experiments:
 
 ```bash
-make test
-make validate
-make smoke
-```
-
-Equivalent direct commands:
-
-```bash
-python -m pytest tests/test_component_validation.py tests/test_failure_buffer.py tests/test_plugin_loading.py tests/test_metrics.py tests/test_run_dir.py -q
-python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
+python scripts/check_env.py --require-metadrive
 python scripts/smoke_test_env.py --config configs/env/metadrive_debug.yaml
+python scripts/run_e2e_stress.py --clean-runs
 ```
+
+The GitHub Actions workflow also includes a manual `workflow_dispatch` MetaDrive smoke job. It is experimental and not required for normal pull request CI.
 
 ## Troubleshooting
 
-If `python` cannot import `fasb`, activate the project environment:
+If MetaDrive does not import, use a known compatible venv first. Python 3.10/3.11 may be safer than Python 3.12 because of old Gym packaging constraints pulled by MetaDrive.
 
-```bash
-source .venv/bin/activate
-```
+If component validation fails, check YAML `_target_` paths and plugin return dataclasses.
 
-If MetaDrive import or env creation fails, rerun setup:
+If training cannot find failures, run `explore_failures.py` first and confirm `runs/base_explore/buffers/failure_buffer.jsonl` exists.
 
-```bash
-./scripts/bootstrap.sh
-source .venv/bin/activate
-make smoke
-```
+If evaluation fails on the checkpoint path, confirm `runs/fasb_ppo/checkpoints/final.zip` exists and was produced by the same compatible environment.
 
-If a plugin fails validation, check:
-
-- The YAML `_target_` import path is correct.
-- The plugin returns the expected dataclass from `fasb.schemas.outputs`.
-- Numeric values are finite and within the documented range.
-
-If training is slow, start with shorter overrides:
-
-```bash
-python scripts/train.py --config configs/train/fasb_ppo.yaml training.total_timesteps=1000 metadrive.config.horizon=100
-```
+Do not commit generated artifacts from `runs/`, `.venv/`, caches, checkpoints, TensorBoard, or W&B output.

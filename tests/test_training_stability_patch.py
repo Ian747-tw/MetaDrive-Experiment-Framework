@@ -11,8 +11,14 @@ from fasb.plugins.failure_classifier import DefaultFailureClassifier
 from fasb.plugins.failure_scorer import DefaultFailureScorer
 from fasb.plugins.safety_budget import AdaptiveSafetyBudget
 from fasb.plugins.sampler import MixedFailureSampler, UniformSampler
+from fasb.envs.wrappers import ScenarioMetadataWrapper
 from fasb.training.callbacks import build_episode_log_record
 from fasb.training.sb3_trainer import SB3Trainer
+
+try:
+    import gymnasium as gym
+except Exception:  # pragma: no cover
+    gym = None
 
 
 def test_training_scenario_record_exposes_metadata_failure_fields() -> None:
@@ -39,6 +45,25 @@ def test_training_scenario_record_exposes_metadata_failure_fields() -> None:
     assert record["failure_mode"] == "collision"
     assert record["source"] == "historical"
     assert record["scenario_source"] == "failure_buffer"
+
+
+BaseDummySeedEnv = gym.Env if gym is not None else object
+
+
+class DummySeedEnv(BaseDummySeedEnv):
+    def reset(self, **kwargs):
+        return "obs", {}
+
+    def step(self, action):
+        return "obs", 0.0, True, False, {}
+
+
+def test_scenario_metadata_wrapper_preserves_reset_seed_without_sampler() -> None:
+    env = ScenarioMetadataWrapper(DummySeedEnv())
+    _, info = env.reset(seed=1001)
+    record = build_training_scenario_record(info)
+    assert record["seed"] == 1001
+    assert record["scenario_id"] == "seed_1001"
 
 
 def test_training_scenario_record_handles_missing_and_malformed_metadata() -> None:
