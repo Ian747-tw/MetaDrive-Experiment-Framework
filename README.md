@@ -4,6 +4,8 @@ FASB MetaDrive is a lightweight experiment framework for failure-aware, safety-b
 
 The framework is meant to be cloned, configured, and extended. Most users should customize YAML configs and small plugin classes instead of editing the training loop.
 
+The current main method is **FASB-PPO: SB3 PPO + failure-aware sampler + adaptive safety penalty**. It is an adaptive reward-penalty PPO workflow, not a full PPO-Lagrangian implementation. PPO-Lagrangian with a learned multiplier update is a stretch/future direction unless that update is explicitly implemented.
+
 It provides:
 
 - MetaDrive environment construction with pass-through simulator config
@@ -285,6 +287,30 @@ More examples are in:
 ```text
 examples/plugin_authoring.md
 ```
+
+### What Is Config-Driven?
+
+The training loop stays small and delegates experiment behavior to configured components. These are plugin-driven through YAML `_target_` entries:
+
+- `cost_function`
+- `failure_scorer`
+- `failure_classifier`
+- `safety_budget`
+- `penalty_scheduler`
+- `sampler`
+
+Sampler construction is also config-driven: `sampler._target_` chooses the sampler class, while the trainer injects runtime seed shards and the configured failure-buffer path when needed.
+
+### Error Logs
+
+Plugin failures are fail-fast, but the framework writes context first. During training, wrapper plugin errors are recorded under:
+
+```text
+runs/<experiment>/errors/plugin_errors.jsonl
+runs/<experiment>/errors/plugin_errors.log
+```
+
+The JSONL file is intended for scripted inspection. The `.log` file contains readable tracebacks for debugging.
 
 ## Output Structure
 

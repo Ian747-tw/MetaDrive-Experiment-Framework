@@ -16,6 +16,8 @@ from fasb.core.validation import (
     validate_failure_score_output,
     validate_penalty_output,
 )
+from fasb.core.plugin_runtime import safe_call_component
+from fasb.failure.record_utils import build_training_scenario_record
 from fasb.plugins.failure_classifier import DefaultFailureClassifier
 from fasb.plugins.failure_scorer import DefaultFailureScorer
 from fasb.plugins.penalty_scheduler import RiskPenaltyScheduler
@@ -95,9 +97,17 @@ class ScenarioMetadataWrapper(BaseWrapper):
 
 
 class CostFunctionWrapper(BaseWrapper):
-    def __init__(self, env: Any, cost_function: Any) -> None:
+    def __init__(
+        self,
+        env: Any,
+        cost_function: Any,
+        error_dir: str | Any | None = None,
+        run_context: dict[str, Any] | None = None,
+    ) -> None:
         _wrapper_init(self, env)
         self.cost_function = cost_function
+        self.error_dir = error_dir
+        self.run_context = run_context or {}
         self.last_obs = None
 
     def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
@@ -107,7 +117,20 @@ class CostFunctionWrapper(BaseWrapper):
 
     def step(self, action: Any) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         obs, reward, terminated, truncated, info = self.env.step(action)
-        output = self.cost_function(self.last_obs, action, reward, obs, terminated, truncated, info)
+        output = safe_call_component(
+            self.cost_function,
+            None,
+            "cost_function",
+            self.run_context,
+            self.error_dir,
+            self.last_obs,
+            action,
+            reward,
+            obs,
+            terminated,
+            truncated,
+            info,
+        )
         validate_cost_output(output)
         info = dict(info)
         info["fasb_cost"] = output.cost
@@ -124,12 +147,16 @@ class AdaptiveRewardPenaltyWrapper(BaseWrapper):
         failure_classifier: Any | None = None,
         safety_budget: Any | None = None,
         penalty_scheduler: Any | None = None,
+        error_dir: str | Any | None = None,
+        run_context: dict[str, Any] | None = None,
     ) -> None:
         _wrapper_init(self, env)
         self.failure_scorer = failure_scorer or DefaultFailureScorer()
         self.failure_classifier = failure_classifier or DefaultFailureClassifier()
         self.safety_budget = safety_budget or AdaptiveSafetyBudget()
         self.penalty_scheduler = penalty_scheduler or RiskPenaltyScheduler()
+        self.error_dir = error_dir
+        self.run_context = run_context or {}
         self.current_budget = None
         self.current_label = None
         self.current_score = None
@@ -137,14 +164,43 @@ class AdaptiveRewardPenaltyWrapper(BaseWrapper):
 
     def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         obs, info = self.env.reset(**kwargs)
-        scenario = dict(info.get("fasb_scenario", {}))
-        score = self.failure_scorer.score(scenario)
+        record = build_training_scenario_record(info)
+        score = safe_call_component(
+            self.failure_scorer, "score", "failure_scorer", self.run_context, self.error_dir, record
+        )
         validate_failure_score_output(score)
-        label = self.failure_classifier.classify(scenario, score)
+        label = safe_call_component(
+            self.failure_classifier,
+            "classify",
+            "failure_classifier",
+            self.run_context,
+            self.error_dir,
+            record,
+            score,
+        )
         validate_failure_label_output(label)
-        budget = self.safety_budget.get_budget(scenario, score, label)
+        budget = safe_call_component(
+            self.safety_budget,
+            "get_budget",
+            "safety_budget",
+            self.run_context,
+            self.error_dir,
+            record,
+            score,
+            label,
+        )
         validate_budget_output(budget)
-        penalty = self.penalty_scheduler.get_penalty(scenario, budget, score, label)
+        penalty = safe_call_component(
+            self.penalty_scheduler,
+            "get_penalty",
+            "penalty_scheduler",
+            self.run_context,
+            self.error_dir,
+            record,
+            budget,
+            score,
+            label,
+        )
         validate_penalty_output(penalty)
         self.current_score = score
         self.current_label = label
@@ -168,12 +224,16 @@ class AdaptiveRewardPenaltyWrapper(BaseWrapper):
         info = dict(info)
         if self.current_budget is not None:
             info["fasb_budget"] = self.current_budget.budget
+            info["fasb_budget_mode"] = self.current_budget.mode
+            info["fasb_budget_reason"] = self.current_budget.reason
         if self.current_penalty is not None:
             info["fasb_penalty_coef"] = self.current_penalty.penalty_coef
+            info["fasb_penalty_reason"] = self.current_penalty.reason
         if self.current_label is not None:
             info["fasb_failure_mode"] = self.current_label.failure_mode
         if self.current_score is not None:
             info["fasb_risk_score"] = self.current_score.risk_score
+            info["fasb_failure_score"] = self.current_score.failure_score
         return info
 
 
