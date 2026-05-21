@@ -37,10 +37,10 @@ research-v1-base-eval:
 	python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
 
 research-v1-build-buffer:
-	python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml
+	python scripts/explore_failures.py --config configs/research_v1/base_explore_large.yaml
 
 research-v1-check:
-	python scripts/check_research_v1_ready.py --min-failures 30
+	python scripts/check_research_v1_ready.py --min-failures 1000
 
 aggregate-results:
 	python scripts/aggregate_results.py --root runs/research_v1

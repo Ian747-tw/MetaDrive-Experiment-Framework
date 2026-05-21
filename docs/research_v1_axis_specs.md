@@ -1,0 +1,147 @@
+# Research V1 Axis Specs
+
+## Shared Final Rules
+
+All final comparisons use the same base checkpoint, canonical large failure buffer, 300k fine-tuning steps, train seed range, eval seed range, horizon, traffic density, metrics, and analysis process. Axis researchers may only change the variables listed for their axis.
+
+Locked final paths:
+
+```text
+base checkpoint: runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+large buffer:    runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
+```
+
+## Axis 1 - Main Comparison
+
+Goal: show FASB-PPO beats normal PPO fine-tuning and fixed-budget fine-tuning under the same base checkpoint, buffer, timesteps, train/eval seeds, and horizon.
+
+Methods:
+
+```text
+Base checkpoint eval
+Naive FT 300k
+Fixed-budget FT 300k
+FASB-PPO 300k
+```
+
+Allowed variables: `mode`, method config, and method-specific safety-budget behavior. Not allowed: base checkpoint, large buffer path, total timesteps, train/eval seeds, horizon, traffic density, PPO hyperparameters unless changed for every compared method.
+
+Commands:
+
+```bash
+python scripts/train.py --config configs/research_v1/axis1_naive_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fixed_budget_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fasb_final.yaml
+```
+
+Evaluate each method:
+
+```bash
+python scripts/evaluate.py --config configs/eval/heldout_random.yaml \
+  --checkpoint runs/research_v1/<method>_s42/checkpoints/final.zip \
+  experiment.name=eval_<method>_s42 \
+  experiment.output_dir=runs/research_v1/eval_<method>_s42 \
+  eval.n_episodes=100 metadrive.config.start_seed=5000 \
+  metadrive.config.num_scenarios=200 metadrive.config.horizon=500
+python scripts/analyze_failures.py --run runs/research_v1/eval_<method>_s42
+python scripts/aggregate_results.py --root runs/research_v1
+```
+
+CSV path: `runs/research_v1/eval_<method>_s42/eval/heldout_random.csv`.
+
+Success: FASB improves safety-efficiency tradeoff over normal fine-tuning by reducing collision/offroad/cost while preserving route completion and success. Failure: safety improves only by collapsing progress, or progress improves while safety worsens.
+
+## Axis 2 - Sampler
+
+Goal: study failure replay ratio.
+
+Variants:
+
+```text
+Uniform
+Mixed 0.3
+Mixed 0.6
+Mixed 0.9
+Mixed 1.0
+```
+
+Allowed variables: `sampler._target_`, `sampler.failure_ratio`, `sampler.alpha`. Screening: 100k. Final: best 1-2 ratios at 300k. Not allowed: changing base checkpoint, final buffer, train/eval seeds, horizon, traffic density, or PPO hyperparameters for one variant only.
+
+Claim: failure-aware replay improves specialization; too much replay may overfit or forget general driving.
+
+Output naming: `runs/research_v1/axis2_sampler_<variant>_s42` and `runs/research_v1/eval_axis2_sampler_<variant>_s42`.
+
+## Axis 3 - Budget/Penalty
+
+Goal: study adaptive safety pressure.
+
+Variants:
+
+```text
+fixed 0.03
+fixed 0.05
+fixed 0.10
+adaptive default
+adaptive strict
+adaptive loose
+```
+
+Allowed variables: `safety_budget.*` and `penalty_scheduler.*`. Not allowed: sampler ratio, final buffer, base checkpoint, train/eval seeds, horizon, traffic density, or total timesteps.
+
+Claim: adaptive budget better balances safety and progress than fixed global penalty.
+
+Success: lower collision/offroad/cost with preserved route completion. Failure: strictness causes timeout/low-progress collapse.
+
+## Axis 4 - Cost Function
+
+Goal: study safety cost definition.
+
+Variants:
+
+```text
+CrashOnlyCost
+DefaultDrivingCost
+NearMissHeavyCost
+```
+
+Allowed variables: `cost_function.*`. Not allowed: scorer, classifier, sampler, safety budget, train/eval seeds, base checkpoint, buffer, timesteps.
+
+Claim: richer pre-crash safety cost may improve safety but can increase conservatism.
+
+Interpretation: use `failure_by_mode.csv` to distinguish fewer crashes from more timeouts/low-progress behavior.
+
+## Axis 5 - Failure Scorer/Generalization
+
+Goal: study failure definition and distribution shift.
+
+Variants:
+
+```text
+DefaultFailureScorer
+NearFailureScorer
+canonical buffer vs optional dense buffer
+heldout random vs dense/easy traffic eval
+```
+
+Allowed variables: `failure_scorer.*`, `failure_classifier.*`, eval `traffic_density`, and axis-specific buffers only when explicitly studying buffer or distribution shift. Not allowed: changing total timesteps, base checkpoint, or train/eval seed ranges in the same comparison.
+
+Claim: failure discovery quality and target-distribution shift affect specialization.
+
+Success: scorer/generalization changes improve safety-efficiency under the intended eval distribution without hiding regressions in heldout random.
+
+## Required Analysis For Every Axis
+
+Produce:
+
+```text
+runs/research_v1/eval_<method>_s42/eval/heldout_random.csv
+runs/research_v1/eval_<method>_s42/analysis/failure_summary.csv
+runs/research_v1/eval_<method>_s42/analysis/failure_by_mode.csv
+runs/research_v1/eval_<method>_s42/analysis/paper_numbers.md
+```
+
+Then run:
+
+```bash
+python scripts/aggregate_results.py --root runs/research_v1
+```
