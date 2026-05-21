@@ -1,4 +1,4 @@
-.PHONY: install validate smoke stress e2e-stress check-env check-env-metadrive benchmark-dry-run test research-v1-base-train research-v1-base-eval research-v1-build-buffer research-v1-check aggregate-results
+.PHONY: install validate smoke stress e2e-stress check-env check-env-metadrive benchmark-dry-run test research-v1-base-train research-v1-base-eval research-v1-build-buffer research-v1-check package-research-v1-artifacts download-research-v1-artifacts validate-research-v1-artifacts aggregate-results
 
 install:
 	./scripts/bootstrap.sh
@@ -41,6 +41,15 @@ research-v1-build-buffer:
 
 research-v1-check:
 	python scripts/check_research_v1_ready.py --min-failures 1000
+
+package-research-v1-artifacts:
+	python scripts/package_research_v1_artifacts.py --root runs/research_v1 --output dist/research_v1_foundation_artifacts.tar.gz
+
+download-research-v1-artifacts:
+	python scripts/download_research_v1_artifacts.py --release research-v1-foundation-v1
+
+validate-research-v1-artifacts:
+	python scripts/check_research_v1_ready.py --root runs/research_v1 --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip --eval-csv runs/research_v1/eval_base_pretrain/eval/heldout_random.csv --buffer runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl --min-failures 1000 --min-episodes 100 --min-success-rate 0.10 --min-route-completion 0.35 --max-timeout-rate 0.95
 
 aggregate-results:
 	python scripts/aggregate_results.py --root runs/research_v1

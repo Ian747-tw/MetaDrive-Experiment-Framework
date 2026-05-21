@@ -5,12 +5,16 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 runs/
+dist/
 checkpoints/
 .venv/
 wandb/
 tensorboard/
 runs/**/*.zip
 checkpoints/**/*.zip
+*.tar.gz
+research_v1_foundation_artifacts.tar.gz
+research_v1_artifact_manifest.json
 *.pt
 *.pth
 *.ckpt
