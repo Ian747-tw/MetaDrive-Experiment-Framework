@@ -127,7 +127,7 @@ Generated local experiment foundation:
 ```text
 runs/research_v1/base_pretrain_s42/checkpoints/final.zip
 runs/research_v1/eval_base_pretrain/eval/heldout_random.csv
-runs/research_v1/base_explore/buffers/failure_buffer.jsonl
+runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
 ```
 
 Generated artifacts under `runs/` are not committed. Teammates must not start the five research axes until the readiness checker passes.
@@ -146,8 +146,8 @@ Manual equivalents:
 ```bash
 python scripts/train.py --config configs/research_v1/base_pretrain.yaml
 python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
-python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml
-python scripts/check_research_v1_ready.py --min-failures 30
+python scripts/explore_failures.py --config configs/research_v1/base_explore_large.yaml
+python scripts/check_research_v1_ready.py --min-failures 1000
 ```
 
 The base checkpoint must pass the minimum success and route-completion thresholds in `scripts/check_base_checkpoint_quality.py`. The failure buffer must have enough records and basic diversity according to `scripts/check_failure_buffer_quality.py`.
@@ -157,6 +157,61 @@ Detailed protocol and copy-paste axis commands:
 ```text
 docs/research_v1_protocol.md
 docs/research_v1_commands.md
+```
+
+## Research V1 Final Readiness
+
+There are two foundations:
+
+```text
+source foundation: docs, configs, scripts, tests, and example plugins committed to git
+local experiment foundation: checkpoint and failure buffers generated under runs/ and not committed
+```
+
+Use the known MetaDrive environment when available:
+
+```bash
+cd ~/metadrive
+source .venv/bin/activate
+cd ~/projects/MetaDrive-Experiment-Framework
+pip install -e . --no-deps
+```
+
+Fresh installs can work, but MetaDrive and old Gym packaging are sensitive to Python version and dependency pins. If a fresh install fails, use a known compatible MetaDrive venv instead of changing framework code.
+
+Final validation:
+
+```bash
+python scripts/check_env.py --require-metadrive
+python scripts/run_e2e_stress.py --clean-runs
+python scripts/check_research_v1_ready.py \
+  --root runs/research_v1 \
+  --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip \
+  --eval-csv runs/research_v1/eval_base_pretrain/eval/heldout_random.csv \
+  --buffer runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl \
+  --min-failures 1000 \
+  --min-episodes 100
+```
+
+Common operations:
+
+```bash
+python scripts/train.py --config configs/research_v1/axis1_fasb_final.yaml
+CUDA_VISIBLE_DEVICES= python scripts/explore_failures.py --config configs/research_v1/base_explore_large.yaml
+python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+python scripts/analyze_failures.py --run runs/research_v1/eval_base_pretrain
+python scripts/aggregate_results.py --root runs/research_v1
+```
+
+Research customization should stay plugin/config-driven. Users should customize plugin classes and YAML `_target_` fields; normal research should not edit the trainer. Axis researchers only change the variables assigned to their axis. Basic PPO, environment, seed, horizon, traffic, buffer, checkpoint, and evaluation settings stay locked for comparability unless the axis explicitly studies that variable.
+
+Final guides:
+
+```text
+docs/research_v1_final_runbook.md
+docs/research_v1_axis_specs.md
+docs/research_v1_results.md
+docs/research_v1_high_level_plan.md
 ```
 
 ## Quick Overrides

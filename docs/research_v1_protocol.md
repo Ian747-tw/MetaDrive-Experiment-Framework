@@ -53,14 +53,15 @@ If the minimum gate fails, do not start research axes. Continue training or adju
 ## Shared Failure Buffer
 
 ```text
-runs/research_v1/base_explore/buffers/failure_buffer.jsonl
+runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
 ```
 
 Quality gate:
 
 ```text
-line_count >= 30
-at least 2 distinct failure modes if possible
+line_count >= 1000
+at least 2 distinct failure modes
+unknown failure_mode fraction <= 0.25
 not all records are solved
 not all records are same seed
 must contain seed, risk_score/failure_score, failure_mode, route_completion or failure stats
@@ -71,7 +72,7 @@ must contain seed, risk_score/failure_score, failure_mode, route_completion or f
 ```text
 base pretraining:       start_seed=1000, num_scenarios=500
 base checkpoint eval:   start_seed=4000, num_scenarios=200
-failure exploration:    start_seed=0,    num_scenarios=500
+failure exploration:    start_seed=0,    num_scenarios=3000
 fine-tuning training:   start_seed=2000, num_scenarios=500
 heldout evaluation:     start_seed=5000, num_scenarios=200
 dense traffic eval:     start_seed=7000, num_scenarios=200
@@ -137,3 +138,56 @@ metrics
 failure buffer path
 base checkpoint path
 ```
+
+## Locked Settings Vs Axis Variables
+
+These settings are locked for all main/final comparisons.
+
+Base checkpoint:
+
+```text
+runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+```
+
+Final canonical failure buffer:
+
+```text
+runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
+```
+
+Fine-tuning training:
+
+```text
+training.total_timesteps=300000 for final runs
+metadrive.config.start_seed=2000
+metadrive.config.num_scenarios=500
+metadrive.config.horizon=500
+metadrive.config.traffic_density=0.1
+vec_env.type=dummy or subproc, but must be same within a comparison
+vec_env.n_envs=1 or 4, but must be same within a comparison
+algorithm.params.device=cpu
+```
+
+Heldout evaluation:
+
+```text
+eval.n_episodes=100
+metadrive.config.start_seed=5000
+metadrive.config.num_scenarios=200
+metadrive.config.horizon=500
+metadrive.config.traffic_density=0.1
+```
+
+Axis researchers may not change these unless their axis explicitly studies that variable. If someone changes basic PPO or environment settings for stability, they must apply the same change to all compared methods and document it. Main final claims require the same base checkpoint, same final buffer, same train/eval seeds, and same timesteps.
+
+Axis variables:
+
+```text
+Axis 1: method: naive_ft vs fixed_budget_ft vs full FASB-PPO
+Axis 2: sampler._target_, sampler.failure_ratio, sampler.alpha
+Axis 3: safety_budget.*, penalty_scheduler.*
+Axis 4: cost_function.*
+Axis 5: failure_scorer.*, failure_classifier.*, eval traffic_density, and axis-specific buffers only if explicitly studying buffer/distribution shift
+```
+
+Do not compare FASB 300k vs Naive 100k. That proves nothing.

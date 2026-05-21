@@ -47,19 +47,33 @@ Then rerun evaluation and the base checkpoint quality check.
 
 ```bash
 python scripts/explore_failures.py \
-  --config configs/research_v1/base_explore.yaml
+  --config configs/research_v1/base_explore_large.yaml
 ```
 
 ## 6. Validate Shared Failure Buffer
 
 ```bash
 python scripts/check_failure_buffer_quality.py \
-  --buffer runs/research_v1/base_explore/buffers/failure_buffer.jsonl \
-  --min-records 30
+  --buffer runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl \
+  --min-records 1000 \
+  --max-unknown-fraction 0.25 \
+  --require-multiple-modes
 ```
 
 ```bash
-python scripts/check_research_v1_ready.py --min-failures 30
+python scripts/check_research_v1_ready.py --min-failures 1000
+```
+
+Final readiness with the large canonical buffer:
+
+```bash
+python scripts/check_research_v1_ready.py \
+  --root runs/research_v1 \
+  --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip \
+  --eval-csv runs/research_v1/eval_base_pretrain/eval/heldout_random.csv \
+  --buffer runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl \
+  --min-failures 1000 \
+  --min-episodes 100
 ```
 
 ## 7. Axis 1 Commands - Main Baselines
