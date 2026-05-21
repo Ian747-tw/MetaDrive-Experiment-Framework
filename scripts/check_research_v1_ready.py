@@ -17,10 +17,14 @@ DEFAULT_ROOT = Path("runs/research_v1")
 
 
 def commands(root: Path) -> str:
+    base_run = root / "base_pretrain_s42"
+    eval_run = root / "eval_base_pretrain"
+    explore_run = root / "base_explore"
+    base_checkpoint = base_run / "checkpoints/final.zip"
     return f"""Commands to build missing local artifacts:
-python scripts/train.py --config configs/research_v1/base_pretrain.yaml
-python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint {root / "base_pretrain_s42/checkpoints/final.zip"}
-python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml
+python scripts/train.py --config configs/research_v1/base_pretrain.yaml experiment.output_dir={base_run}
+python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint {base_checkpoint} experiment.output_dir={eval_run} algorithm.checkpoint_path={base_checkpoint}
+python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml experiment.output_dir={explore_run} algorithm.checkpoint_path={base_checkpoint}
 python scripts/check_research_v1_ready.py --root {root} --min-failures 30
 """
 
