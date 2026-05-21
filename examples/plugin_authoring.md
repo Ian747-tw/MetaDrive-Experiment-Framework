@@ -1,6 +1,6 @@
 # Plugin Authoring
 
-Plugins are regular Python classes referenced from YAML with `_target_`. They are the intended extension point for most research changes; avoid editing the training loop for ordinary experiments.
+Plugins are regular Python classes referenced from YAML with `_target_`. They are the intended extension point for research changes; teammates should customize configs and plugins instead of editing the training loop.
 
 Plugin outputs must return dataclasses from `fasb.schemas.outputs`. Invalid outputs fail fast through validation or runtime checks. Runtime plugin errors are logged in `runs/<experiment>/errors/`.
 
@@ -10,65 +10,117 @@ Validate plugin wiring before training:
 python scripts/validate_components.py --config configs/train/fasb_ppo.yaml
 ```
 
-## Custom Cost Function
+## Required Interfaces
+
+```text
+cost_function.__call__(obs, action, reward, next_obs, terminated, truncated, info) -> CostOutput
+failure_scorer.score(episode_record) -> FailureScoreOutput
+failure_classifier.classify(episode_record, score) -> FailureLabelOutput
+safety_budget.get_budget(scenario_record, score, label) -> BudgetOutput
+penalty_scheduler.get_penalty(scenario_record, budget, score, label) -> PenaltyOutput
+sampler.next() -> ScenarioSample
+```
+
+`safety_budget.__call__` and `sampler.sample` are not framework extension points.
+
+## Copy-Paste Examples
 
 ```python
-from fasb.schemas.outputs import CostOutput
+from fasb.plugins.cost import DefaultDrivingCost
+from fasb.schemas.outputs import (
+    BudgetOutput,
+    CostOutput,
+    FailureLabelOutput,
+    FailureScoreOutput,
+    PenaltyOutput,
+    ScenarioSample,
+)
 
 
-class CrashCost:
-    name = "CrashCost"
+class CrashOnlyCost:
+    name = "CrashOnlyCost"
 
     def __call__(self, obs, action, reward, next_obs, terminated, truncated, info):
-        crash_cost = 1.0 if info.get("crash") else 0.0
-        out_cost = 0.5 if info.get("out_of_road") else 0.0
-        cost = crash_cost + out_cost
+        collision = float(bool(info.get("crash") or info.get("collision") or info.get("crash_vehicle")))
+        offroad = float(bool(info.get("out_of_road") or info.get("offroad") or info.get("crash_offroad")))
         return CostOutput(
-            cost=cost,
-            components={"crash": crash_cost, "out_of_road": out_cost},
+            cost=collision + offroad,
+            components={"collision": collision, "offroad": offroad},
         )
-```
-
-```yaml
-cost_function:
-  _target_: my_project.plugins.CrashCost
-```
-
-## Custom Safety Budget
-
-```python
-from fasb.schemas.outputs import BudgetOutput
 
 
-class ConservativeBudget:
-    name = "ConservativeBudget"
+class NearMissHeavyCost(DefaultDrivingCost):
+    name = "NearMissHeavyCost"
 
-    def __init__(self, default_budget=0.03, hard_budget=0.01):
-        self.default_budget = default_budget
-        self.hard_budget = hard_budget
+    def __init__(self):
+        super().__init__(
+            collision_weight=1.0,
+            offroad_weight=1.0,
+            near_miss_weight=0.5,
+            min_distance_threshold=5.0,
+        )
 
-    def __call__(self, scenario_metadata=None, failure_stats=None):
-        metadata = scenario_metadata or {}
-        too_hard = bool(metadata.get("too_hard", False))
-        budget = self.hard_budget if too_hard else self.default_budget
+
+class NearFailureScorer:
+    name = "NearFailureScorer"
+
+    def score(self, episode_record):
+        collision = float(bool(episode_record.get("collision")))
+        offroad = float(bool(episode_record.get("offroad")))
+        route_completion = float(episode_record.get("route_completion") or 0.0)
+        near_miss = float(episode_record.get("near_miss", episode_record.get("min_vehicle_distance_risk", 0.0)) or 0.0)
+        low_progress = max(0.0, 1.0 - route_completion)
+        raw = 3.0 * near_miss + 2.0 * low_progress + 2.0 * collision + 1.5 * offroad
+        risk = min(max(raw / 6.0, 0.0), 1.0)
+        return FailureScoreOutput(
+            failure_score=float(raw),
+            risk_score=float(risk),
+            reason={
+                "near_miss": near_miss,
+                "low_progress": low_progress,
+                "collision": collision,
+                "offroad": offroad,
+            },
+        )
+
+
+class TimeoutRelaxedBudget:
+    name = "TimeoutRelaxedBudget"
+
+    def __init__(self, d_min=0.02, d_max=0.10, timeout_budget=0.08):
+        self.d_min = d_min
+        self.d_max = d_max
+        self.timeout_budget = timeout_budget
+
+    def get_budget(self, scenario_record, score, label):
+        if label.failure_mode in {"timeout_or_hesitation", "low_progress"}:
+            budget = self.timeout_budget
+            mode = "relaxed_progress"
+        elif label.failure_mode in {"collision", "offroad"}:
+            budget = self.d_min
+            mode = "strict_safety"
+        else:
+            budget = self.d_max - (self.d_max - self.d_min) * score.risk_score
+            mode = "risk_adaptive"
+        budget = min(max(float(budget), self.d_min), self.d_max)
         return BudgetOutput(
             budget=budget,
-            mode="hard" if too_hard else "default",
-            reason={"too_hard": str(too_hard)},
+            mode=mode,
+            reason={"failure_mode": label.failure_mode, "risk_score": score.risk_score},
         )
-```
 
-```yaml
-safety_budget:
-  _target_: my_project.plugins.ConservativeBudget
-  default_budget: 0.03
-  hard_budget: 0.01
-```
 
-## Custom Sampler
+class FixedPenaltyScheduler:
+    name = "FixedPenaltyScheduler"
 
-```python
-from fasb.schemas.outputs import ScenarioSample
+    def __init__(self, penalty_coef=1.0):
+        self.penalty_coef = penalty_coef
+
+    def get_penalty(self, scenario_record, budget, score, label):
+        return PenaltyOutput(
+            penalty_coef=float(self.penalty_coef),
+            reason={"budget": budget.budget, "failure_mode": label.failure_mode},
+        )
 
 
 class FirstSeedSampler:
@@ -77,18 +129,33 @@ class FirstSeedSampler:
     def __init__(self, start_seed=1000):
         self.start_seed = start_seed
 
-    def sample(self, failure_buffer=None, rng=None):
+    def next(self):
         return ScenarioSample(
             seed=int(self.start_seed),
-            source="custom",
+            source="first_seed",
             priority=1.0,
             metadata={"policy": "first_seed"},
         )
 ```
 
+Example YAML:
+
 ```yaml
+cost_function:
+  _target_: examples.custom_plugins.crash_only_cost.CrashOnlyCost
+
+failure_scorer:
+  _target_: examples.custom_plugins.near_failure_scorer.NearFailureScorer
+
+safety_budget:
+  _target_: examples.custom_plugins.timeout_relaxed_budget.TimeoutRelaxedBudget
+
+penalty_scheduler:
+  _target_: examples.custom_plugins.fixed_penalty_scheduler.FixedPenaltyScheduler
+  penalty_coef: 1.0
+
 sampler:
-  _target_: my_project.plugins.FirstSeedSampler
+  _target_: examples.custom_plugins.first_seed_sampler.FirstSeedSampler
   start_seed: 1000
 ```
 

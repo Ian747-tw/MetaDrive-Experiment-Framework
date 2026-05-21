@@ -105,6 +105,60 @@ runs/heldout_random_eval/analysis/
 
 See [docs/experiment_workflow.md](docs/experiment_workflow.md) for a one-page teammate guide covering baselines, FASB-PPO, evaluation, and comparison outputs.
 
+## Research V1 Foundation
+
+Research V1 separates committed source foundation from generated experiment artifacts.
+
+Committed source foundation:
+
+```text
+docs/research_v1_protocol.md
+docs/research_v1_commands.md
+configs/research_v1/
+examples/custom_plugins/
+scripts/aggregate_results.py
+scripts/check_base_checkpoint_quality.py
+scripts/check_failure_buffer_quality.py
+scripts/check_research_v1_ready.py
+```
+
+Generated local experiment foundation:
+
+```text
+runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+runs/research_v1/eval_base_pretrain/eval/heldout_random.csv
+runs/research_v1/base_explore/buffers/failure_buffer.jsonl
+```
+
+Generated artifacts under `runs/` are not committed. Teammates must not start the five research axes until the readiness checker passes.
+
+Make targets:
+
+```bash
+make research-v1-base-train
+make research-v1-base-eval
+make research-v1-build-buffer
+make research-v1-check
+```
+
+Manual equivalents:
+
+```bash
+python scripts/train.py --config configs/research_v1/base_pretrain.yaml
+python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml
+python scripts/check_research_v1_ready.py --min-failures 30
+```
+
+The base checkpoint must pass the minimum success and route-completion thresholds in `scripts/check_base_checkpoint_quality.py`. The failure buffer must have enough records and basic diversity according to `scripts/check_failure_buffer_quality.py`.
+
+Detailed protocol and copy-paste axis commands:
+
+```text
+docs/research_v1_protocol.md
+docs/research_v1_commands.md
+```
+
 ## Quick Overrides
 
 Hydra-style CLI overrides let you change settings without editing YAML:
