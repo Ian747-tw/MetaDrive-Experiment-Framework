@@ -134,7 +134,7 @@ python scripts/aggregate_results.py --root runs/research_v1 --output runs/resear
 ## 15. What Files Each Teammate Must Send Back
 
 ```text
-runs/research_v1/<axis>_<variant>_s42/config.yaml
+runs/research_v1/<axis>_<variant>_s42/config_resolved.yaml
 runs/research_v1/eval_<axis>_<variant>_s42/eval/heldout_random.csv
 runs/research_v1/eval_<axis>_<variant>_s42/analysis/failure_by_mode.csv
 runs/research_v1/eval_<axis>_<variant>_s42/analysis/paper_numbers.md

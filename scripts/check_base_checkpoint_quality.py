@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-REQUIRED_COLUMNS = {"success_rate", "route_completion_mean", "timeout_rate"}
+REQUIRED_COLUMNS = {"n_episodes", "success_rate", "route_completion_mean", "timeout_rate"}
 
 
 def read_metrics(eval_csv: str | Path) -> dict[str, float]:
@@ -33,11 +33,14 @@ def read_metrics(eval_csv: str | Path) -> dict[str, float]:
 
 def check_quality(
     metrics: dict[str, float],
+    min_episodes: int,
     min_success_rate: float,
     min_route_completion: float,
     max_timeout_rate: float,
 ) -> list[str]:
     failures: list[str] = []
+    if metrics["n_episodes"] < min_episodes:
+        failures.append(f"n_episodes {metrics['n_episodes']:.0f} < {min_episodes}")
     if metrics["success_rate"] < min_success_rate:
         failures.append(f"success_rate {metrics['success_rate']:.4f} < {min_success_rate:.4f}")
     if metrics["route_completion_mean"] < min_route_completion:
@@ -52,6 +55,7 @@ def check_quality(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval-csv", required=True)
+    parser.add_argument("--min-episodes", type=int, default=100)
     parser.add_argument("--min-success-rate", type=float, default=0.10)
     parser.add_argument("--min-route-completion", type=float, default=0.35)
     parser.add_argument("--max-timeout-rate", type=float, default=0.95)
@@ -61,6 +65,7 @@ def main() -> int:
         metrics = read_metrics(args.eval_csv)
         failures = check_quality(
             metrics,
+            args.min_episodes,
             args.min_success_rate,
             args.min_route_completion,
             args.max_timeout_rate,
