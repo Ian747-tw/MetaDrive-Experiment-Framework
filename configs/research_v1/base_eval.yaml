@@ -1,0 +1,31 @@
+experiment:
+  name: eval_base_pretrain
+  seed: 42
+  output_dir: runs/research_v1/eval_base_pretrain
+mode: eval
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 4000
+    num_scenarios: 200
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 500
+    log_level: 50
+    crash_vehicle_done: false
+    crash_object_done: false
+    out_of_road_done: false
+algorithm:
+  backend: sb3
+  name: PPO
+  policy: MlpPolicy
+  checkpoint_path: runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+  params:
+    device: cpu
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+eval:
+  scenario_set: heldout_random
+  n_episodes: 100
+  deterministic: true

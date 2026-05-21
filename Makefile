@@ -1,4 +1,4 @@
-.PHONY: install validate smoke stress e2e-stress check-env check-env-metadrive benchmark-dry-run test
+.PHONY: install validate smoke stress e2e-stress check-env check-env-metadrive benchmark-dry-run test research-v1-base-train research-v1-base-eval research-v1-build-buffer research-v1-check aggregate-results
 
 install:
 	./scripts/bootstrap.sh
@@ -29,3 +29,18 @@ e2e-stress:
 
 benchmark-dry-run:
 	python scripts/benchmark.py --config configs/benchmark/final.yaml --dry-run
+
+research-v1-base-train:
+	python scripts/train.py --config configs/research_v1/base_pretrain.yaml
+
+research-v1-base-eval:
+	python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+
+research-v1-build-buffer:
+	python scripts/explore_failures.py --config configs/research_v1/base_explore.yaml
+
+research-v1-check:
+	python scripts/check_research_v1_ready.py --min-failures 30
+
+aggregate-results:
+	python scripts/aggregate_results.py --root runs/research_v1
