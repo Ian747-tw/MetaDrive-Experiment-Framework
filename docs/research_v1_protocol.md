@@ -191,3 +191,34 @@ Axis 5: failure_scorer.*, failure_classifier.*, eval traffic_density, and axis-s
 ```
 
 Do not compare FASB 300k vs Naive 100k. That proves nothing.
+
+## Shared Artifact Distribution
+
+Required release:
+
+```text
+research-v1-foundation-v1
+```
+
+Assets:
+
+```text
+research_v1_foundation_artifacts.tar.gz
+research_v1_artifact_manifest.json
+```
+
+Extracted paths:
+
+```text
+runs/research_v1/base_pretrain_s42/checkpoints/final.zip
+runs/research_v1/eval_base_pretrain/eval/heldout_random.csv
+runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
+```
+
+Verification command:
+
+```bash
+make validate-research-v1-artifacts
+```
+
+Axis 1-4 must use the release-provided checkpoint and canonical large buffer. Axis 5 may use axis-specific buffers only when the research question explicitly studies buffer or distribution shift.

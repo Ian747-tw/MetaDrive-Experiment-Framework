@@ -214,6 +214,51 @@ docs/research_v1_results.md
 docs/research_v1_high_level_plan.md
 ```
 
+## Research V1 Shared Artifacts
+
+Axis 1-4 must use the same base checkpoint and canonical large failure buffer. These files are generated artifacts and are not committed to git; they are distributed through GitHub Release assets. Source code, docs, configs, and scripts live in git. Generated checkpoint, eval CSV, and failure buffer files live in the release archive.
+
+Required release:
+
+```text
+research-v1-foundation-v1
+```
+
+Download flow for teammates:
+
+```bash
+cd ~/metadrive
+source .venv/bin/activate
+cd ~/projects/MetaDrive-Experiment-Framework
+git checkout main
+git pull origin main
+pip install -e . --no-deps
+
+python scripts/download_research_v1_artifacts.py --release research-v1-foundation-v1
+```
+
+Manual fallback:
+
+```bash
+gh release download research-v1-foundation-v1 \
+  --pattern "research_v1_foundation_artifacts.tar.gz"
+
+tar -xzf research_v1_foundation_artifacts.tar.gz
+
+python scripts/check_research_v1_ready.py \
+  --root runs/research_v1 \
+  --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip \
+  --eval-csv runs/research_v1/eval_base_pretrain/eval/heldout_random.csv \
+  --buffer runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl \
+  --min-failures 1000 \
+  --min-episodes 100 \
+  --min-success-rate 0.10 \
+  --min-route-completion 0.35 \
+  --max-timeout-rate 0.95
+```
+
+Do not run Axis 1-4 against different locally regenerated checkpoints or buffers unless the experiment explicitly studies checkpoint or buffer construction. That breaks comparability.
+
 ## Quick Overrides
 
 Hydra-style CLI overrides let you change settings without editing YAML:
