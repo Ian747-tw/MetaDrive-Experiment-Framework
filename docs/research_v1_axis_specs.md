@@ -21,10 +21,25 @@ Methods:
 Base checkpoint eval
 Naive FT 300k
 Fixed-budget FT 300k
-FASB-PPO 300k
+Original FASB-PPO 300k
+Stable FASB-PPO 300k
 ```
 
-Allowed variables: `mode`, method config, and method-specific safety-budget behavior. Not allowed: base checkpoint, large buffer path, total timesteps, train/eval seeds, horizon, traffic density, PPO hyperparameters unless changed for every compared method.
+Allowed variables: `mode`, method config, and method-specific safety-budget behavior. Not allowed: base checkpoint, large buffer path, total timesteps, train/eval seeds, horizon, or traffic density.
+
+The historical `configs/research_v1/axis1_fasb_final.yaml` is retained as the original collapsed default. The stabilized default is `configs/research_v1/axis1_fasb_stable_final.yaml`, selected after 300k dev calibration on `start_seed=4500`, `num_scenarios=100`, without using the final heldout range for selection. It uses gentler failure replay and penalty settings:
+
+```text
+sampler.failure_ratio=0.05
+safety_budget.d_min=0.10
+safety_budget.d_max=0.30
+safety_budget.timeout_budget=0.30
+penalty_scheduler.lambda_min=0.0
+penalty_scheduler.lambda_max=0.25
+algorithm.params.learning_rate=0.00003
+```
+
+Axis 2 and Axis 3 ablations should vary sampler and budget/penalty settings around this calibrated stable default while continuing to report the original collapse as a diagnostic result.
 
 Commands:
 
@@ -32,6 +47,7 @@ Commands:
 python scripts/train.py --config configs/research_v1/axis1_naive_final.yaml
 python scripts/train.py --config configs/research_v1/axis1_fixed_budget_final.yaml
 python scripts/train.py --config configs/research_v1/axis1_fasb_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fasb_stable_final.yaml
 ```
 
 Evaluate each method:

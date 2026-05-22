@@ -5,7 +5,9 @@ import json
 import pytest
 from omegaconf import OmegaConf
 
+from fasb.buffers.failure_buffer import FailureBuffer
 from fasb.core.plugin_runtime import safe_call_component
+from fasb.envs.wrappers import CostFunctionWrapper
 from fasb.failure.record_utils import build_training_scenario_record
 from fasb.plugins.failure_classifier import DefaultFailureClassifier
 from fasb.plugins.failure_scorer import DefaultFailureScorer
@@ -122,6 +124,41 @@ def test_sampler_uses_config_target_and_injects_failure_buffer_path(tmp_path) ->
     assert len(sampler.failure_buffer) == 1
 
 
+def test_mixed_failure_sampler_only_emits_in_range_failure_seeds() -> None:
+    buffer = FailureBuffer(
+        [
+            {"seed": 11, "risk_score": 1.0, "failure_mode": "collision"},
+            {"seed": 105, "risk_score": 1.0, "failure_mode": "offroad"},
+        ]
+    )
+    sampler = MixedFailureSampler(
+        failure_buffer=buffer,
+        start_seed=100,
+        num_scenarios=10,
+        failure_ratio=1.0,
+    )
+
+    for _ in range(20):
+        sample = sampler.next()
+        assert sample.seed == 105
+        assert sample.source == "failure_buffer"
+
+
+def test_mixed_failure_sampler_falls_back_when_buffer_has_no_in_range_seeds() -> None:
+    buffer = FailureBuffer([{"seed": 11, "risk_score": 1.0, "failure_mode": "collision"}])
+    sampler = MixedFailureSampler(
+        failure_buffer=buffer,
+        start_seed=100,
+        num_scenarios=10,
+        failure_ratio=1.0,
+    )
+
+    for _ in range(20):
+        sample = sampler.next()
+        assert 100 <= sample.seed < 110
+        assert sample.source == "random"
+
+
 def test_uniform_sampler_config_target_and_sharding(tmp_path) -> None:
     cfg = OmegaConf.create(
         {
@@ -196,3 +233,67 @@ def test_build_episode_log_record_rich_fields_and_missing_optional_keys() -> Non
     assert record["budget_mode"] == "risk_adaptive"
     assert record["monitor_return"] == 3.0
     assert build_episode_log_record({}, 10)["episode_id"] == 10
+
+
+class ResettableCost:
+    name = "ResettableCost"
+
+    def __init__(self) -> None:
+        self.reset_calls = 0
+
+    def reset(self) -> None:
+        self.reset_calls += 1
+
+    def __call__(self, obs, action, reward, next_obs, terminated, truncated, info):
+        from fasb.schemas.outputs import CostOutput
+
+        return CostOutput(cost=0.0, components={})
+
+
+def test_cost_function_wrapper_calls_plugin_reset() -> None:
+    cost = ResettableCost()
+    env = CostFunctionWrapper(DummySeedEnv(), cost)
+    env.reset(seed=100)
+    env.reset(seed=101)
+    assert cost.reset_calls == 2
+
+
+def test_checkpoint_finetune_honors_configured_algorithm_params(tmp_path, monkeypatch) -> None:
+    checkpoint = tmp_path / "model.zip"
+    checkpoint.write_text("placeholder", encoding="utf-8")
+    calls = {}
+
+    class FakePPO:
+        @classmethod
+        def load(cls, path, **kwargs):
+            calls["path"] = path
+            calls["kwargs"] = kwargs
+            return "loaded-model"
+
+    import stable_baselines3
+
+    monkeypatch.setattr(stable_baselines3, "PPO", FakePPO)
+    cfg = OmegaConf.create(
+        {
+            "experiment": {"name": "test", "output_dir": str(tmp_path)},
+            "algorithm": {
+                "checkpoint_path": str(checkpoint),
+                "params": {
+                    "learning_rate": 0.00003,
+                    "device": "cpu",
+                    "batch_size": 64,
+                    "policy_kwargs": {"net_arch": [256, 256]},
+                },
+            },
+        }
+    )
+
+    model = SB3Trainer(cfg)._build_model(env="env")
+
+    assert model == "loaded-model"
+    assert calls["path"] == str(checkpoint)
+    assert calls["kwargs"]["env"] == "env"
+    assert calls["kwargs"]["device"] == "cpu"
+    assert calls["kwargs"]["learning_rate"] == 0.00003
+    assert calls["kwargs"]["batch_size"] == 64
+    assert "policy_kwargs" not in calls["kwargs"]

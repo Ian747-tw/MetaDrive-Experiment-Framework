@@ -89,6 +89,15 @@ training.total_timesteps=300000
 
 Keep base checkpoint, final buffer, train/eval seeds, horizon, traffic density, and timesteps locked unless the axis explicitly studies that variable.
 
+For FASB-PPO, do not promote the historical `axis1_fasb_final.yaml` as the default. Axis 1 showed that the original FASB setting and the attempted v2 candidate collapsed into timeout/low-progress at 300k. Use the stabilized default config for future FASB comparisons:
+
+```text
+configs/research_v1/fasb_stable_default.yaml
+configs/research_v1/axis1_fasb_stable_final.yaml
+```
+
+The stable default was selected on dev validation only (`start_seed=4500`, `num_scenarios=100`) after 300k training and checkpoint selection. It keeps the method as SB3 PPO + failure-aware sampler + adaptive safety penalty, not PPO-Lagrangian. Axis 2 and Axis 3 should ablate sampler ratios and safety budgets around this calibrated default.
+
 ## Shared Artifact Distribution
 
 Required release:

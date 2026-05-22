@@ -113,7 +113,8 @@ class Evaluator:
 
             path = Path(checkpoint_path)
             if path.exists():
-                return PPO.load(str(path), env=env)
+                device = self.config.get("algorithm", {}).get("params", {}).get("device", "auto")
+                return PPO.load(str(path), env=env, device=device)
         return RandomPolicy(env.action_space)
 
     def _write_metrics_csv(self, scenario_set: str, metrics: dict[str, float]) -> None:
