@@ -113,7 +113,7 @@ class Evaluator:
 
             path = Path(checkpoint_path)
             if path.exists():
-                device = self.config.get("algorithm", {}).get("params", {}).get("device", "auto")
+                device = self.config.get("algorithm", {}).get("params", {}).get("device", "cpu")
                 return PPO.load(str(path), env=env, device=device)
         return RandomPolicy(env.action_space)
 

@@ -196,6 +196,8 @@ python scripts/check_research_v1_ready.py \
 Common operations:
 
 ```bash
+python scripts/train.py --config configs/research_v1/axis1_naive_stable_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fixed_budget_stable_final.yaml
 python scripts/train.py --config configs/research_v1/axis1_fasb_stable_final.yaml
 CUDA_VISIBLE_DEVICES= python scripts/explore_failures.py --config configs/research_v1/base_explore_large.yaml
 python scripts/evaluate.py --config configs/research_v1/base_eval.yaml --checkpoint runs/research_v1/base_pretrain_s42/checkpoints/final.zip
@@ -205,7 +207,7 @@ python scripts/aggregate_results.py --root runs/research_v1
 
 Research customization should stay plugin/config-driven. Users should customize plugin classes and YAML `_target_` fields; normal research should not edit the trainer. Axis researchers only change the variables assigned to their axis. Basic PPO, environment, seed, horizon, traffic, buffer, checkpoint, and evaluation settings stay locked for comparability unless the axis explicitly studies that variable.
 
-The original Axis 1 FASB config is retained for historical comparison because it collapsed into timeout at 300k. Use `configs/research_v1/fasb_stable_default.yaml` or `configs/research_v1/axis1_fasb_stable_final.yaml` as the calibrated FASB default for future axes.
+The original Axis 1 FASB config is retained for historical comparison because it collapsed into timeout at 300k. Use `configs/research_v1/fasb_stable_default.yaml` or `configs/research_v1/axis1_fasb_stable_final.yaml` as the calibrated FASB default for future axes. Fair Axis 1 claims must compare against `axis1_naive_stable_final.yaml` and `axis1_fixed_budget_stable_final.yaml`, which use the same stable optimizer and dev checkpoint-selection protocol.
 
 Final guides:
 
