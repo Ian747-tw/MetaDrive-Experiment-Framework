@@ -89,6 +89,18 @@ training.total_timesteps=300000
 
 Keep base checkpoint, final buffer, train/eval seeds, horizon, traffic density, and timesteps locked unless the axis explicitly studies that variable.
 
+Axis 1 includes both the original FASB-PPO config and an attempted FASB-PPO v2 candidate config:
+
+```bash
+CUDA_VISIBLE_DEVICES= python scripts/train.py \
+  --config configs/research_v1/axis1_fasb_final.yaml
+
+CUDA_VISIBLE_DEVICES= python scripts/train.py \
+  --config configs/research_v1/axis1_fasb_v2_final.yaml
+```
+
+The original FASB default collapsed into timeout in the first Axis 1 run: it achieved zero collision/offroad/cost by nearly freezing. Keep that result visible as a historical reference. The attempted FASB v2 candidate used gentler failure replay and safety penalty settings selected on the dev validation range (`start_seed=4500`, `num_scenarios=100`), not on the final heldout range. However, the 300k v2 checkpoint also collapsed on dev and final heldout, so it is not an accepted default. Axis 2 and Axis 3 should explicitly test whether candidate settings remain valid at the intended final training duration before using final heldout.
+
 ## Shared Artifact Distribution
 
 Required release:

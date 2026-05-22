@@ -159,6 +159,8 @@ docs/research_v1_protocol.md
 docs/research_v1_commands.md
 ```
 
+Research V1 Axis 1 keeps the original FASB-PPO config as a historical reference and includes `configs/research_v1/axis1_fasb_v2_final.yaml` as a failed calibrated candidate. The candidate was selected on 100k-step dev calibration with gentler failure replay and adaptive safety penalty settings, but its 300k checkpoint still collapsed. Do not present it as a fixed default without further calibration.
+
 ## Research V1 Final Readiness
 
 There are two foundations:

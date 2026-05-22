@@ -5,6 +5,7 @@ import json
 import pytest
 from omegaconf import OmegaConf
 
+from fasb.buffers.failure_buffer import FailureBuffer
 from fasb.core.plugin_runtime import safe_call_component
 from fasb.failure.record_utils import build_training_scenario_record
 from fasb.plugins.failure_classifier import DefaultFailureClassifier
@@ -120,6 +121,41 @@ def test_sampler_uses_config_target_and_injects_failure_buffer_path(tmp_path) ->
     sampler = SB3Trainer(cfg)._build_sampler(0)
     assert isinstance(sampler, MixedFailureSampler)
     assert len(sampler.failure_buffer) == 1
+
+
+def test_mixed_failure_sampler_only_emits_in_range_failure_seeds() -> None:
+    buffer = FailureBuffer(
+        [
+            {"seed": 11, "risk_score": 1.0, "failure_mode": "collision"},
+            {"seed": 105, "risk_score": 1.0, "failure_mode": "offroad"},
+        ]
+    )
+    sampler = MixedFailureSampler(
+        failure_buffer=buffer,
+        start_seed=100,
+        num_scenarios=10,
+        failure_ratio=1.0,
+    )
+
+    for _ in range(20):
+        sample = sampler.next()
+        assert sample.seed == 105
+        assert sample.source == "failure_buffer"
+
+
+def test_mixed_failure_sampler_falls_back_when_buffer_has_no_in_range_seeds() -> None:
+    buffer = FailureBuffer([{"seed": 11, "risk_score": 1.0, "failure_mode": "collision"}])
+    sampler = MixedFailureSampler(
+        failure_buffer=buffer,
+        start_seed=100,
+        num_scenarios=10,
+        failure_ratio=1.0,
+    )
+
+    for _ in range(20):
+        sample = sampler.next()
+        assert 100 <= sample.seed < 110
+        assert sample.source == "random"
 
 
 def test_uniform_sampler_config_target_and_sharding(tmp_path) -> None:
