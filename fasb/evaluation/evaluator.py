@@ -109,13 +109,13 @@ class Evaluator:
 
     def _load_policy(self, checkpoint_path: str | None, env: Any):
         if checkpoint_path:
+            path = Path(checkpoint_path)
+            if not path.exists():
+                raise FileNotFoundError(f"Checkpoint not found: {path}")
             from stable_baselines3 import PPO
 
-            path = Path(checkpoint_path)
-            if path.exists():
-                device = self.config.get("algorithm", {}).get("params", {}).get("device", "cpu")
-                return PPO.load(str(path), env=env, device=device)
-            raise FileNotFoundError(f"Checkpoint not found: {path}")
+            device = self.config.get("algorithm", {}).get("params", {}).get("device", "cpu")
+            return PPO.load(str(path), env=env, device=device)
         return RandomPolicy(env.action_space)
 
     def _write_metrics_csv(self, scenario_set: str, metrics: dict[str, float]) -> None:
