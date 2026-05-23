@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 
 import pytest
 from omegaconf import OmegaConf
@@ -270,9 +272,9 @@ def test_checkpoint_finetune_honors_configured_algorithm_params(tmp_path, monkey
             calls["kwargs"] = kwargs
             return "loaded-model"
 
-    import stable_baselines3
-
-    monkeypatch.setattr(stable_baselines3, "PPO", FakePPO)
+    fake_sb3 = types.ModuleType("stable_baselines3")
+    fake_sb3.PPO = FakePPO
+    monkeypatch.setitem(sys.modules, "stable_baselines3", fake_sb3)
     cfg = OmegaConf.create(
         {
             "experiment": {"name": "test", "output_dir": str(tmp_path)},
