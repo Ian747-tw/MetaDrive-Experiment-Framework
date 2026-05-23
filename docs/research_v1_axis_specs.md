@@ -134,7 +134,7 @@ Mixed 0.9
 Mixed 1.0
 ```
 
-Allowed variables: `sampler._target_`, `sampler.failure_ratio`, `sampler.alpha`. Screening: 100k. Final: best 1-2 ratios at 300k. Not allowed: changing base checkpoint, final buffer, train/eval seeds, horizon, traffic density, or PPO hyperparameters for one variant only.
+Allowed variables: `sampler._target_`, `sampler.failure_ratio`, `sampler.alpha`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, checkpoint, buffer, budget, penalty, train/eval seeds, horizon, and traffic settings. Not allowed: changing base checkpoint, final buffer, train/eval seeds, horizon, traffic density, budget/penalty, cost/scorer, or PPO hyperparameters for one variant only.
 
 Claim: failure-aware replay improves specialization; too much replay may overfit or forget general driving.
 
@@ -155,7 +155,7 @@ adaptive strict
 adaptive loose
 ```
 
-Allowed variables: `safety_budget.*` and `penalty_scheduler.*`. Not allowed: sampler ratio, final buffer, base checkpoint, train/eval seeds, horizon, traffic density, or total timesteps.
+Allowed variables: `safety_budget.*` and `penalty_scheduler.*`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, sampler ratio, final buffer, base checkpoint, train/eval seeds, horizon, traffic density, and total timesteps.
 
 Claim: adaptive budget better balances safety and progress than fixed global penalty.
 
@@ -173,7 +173,7 @@ DefaultDrivingCost
 NearMissHeavyCost
 ```
 
-Allowed variables: `cost_function.*`. Not allowed: scorer, classifier, sampler, safety budget, train/eval seeds, base checkpoint, buffer, timesteps.
+Allowed variables: `cost_function.*`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, scorer, classifier, sampler, safety budget, train/eval seeds, base checkpoint, buffer, and timesteps.
 
 Claim: richer pre-crash safety cost may improve safety but can increase conservatism.
 
@@ -192,7 +192,7 @@ canonical buffer vs optional dense buffer
 heldout random vs dense/easy traffic eval
 ```
 
-Allowed variables: `failure_scorer.*`, `failure_classifier.*`, eval `traffic_density`, and axis-specific buffers only when explicitly studying buffer or distribution shift. Not allowed: changing total timesteps, base checkpoint, or train/eval seed ranges in the same comparison.
+Allowed variables: `failure_scorer.*`, `failure_classifier.*`, eval `traffic_density`, and axis-specific buffers only when explicitly labeled as a buffer/distribution-shift experiment. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, sampler, safety budget, penalty schedule, total timesteps, base checkpoint, and train/eval seed ranges in the same comparison.
 
 Claim: failure discovery quality and target-distribution shift affect specialization.
 

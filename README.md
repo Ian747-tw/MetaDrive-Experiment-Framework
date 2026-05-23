@@ -209,6 +209,8 @@ Research customization should stay plugin/config-driven. Users should customize 
 
 The original Axis 1 FASB config is retained for historical comparison because it collapsed into timeout at 300k. Use `configs/research_v1/fasb_stable_default.yaml` or `configs/research_v1/axis1_fasb_stable_final.yaml` as the calibrated FASB default for future axes. Fair Axis 1 claims must compare against `axis1_naive_stable_final.yaml` and `axis1_fixed_budget_stable_final.yaml`, which use the same stable optimizer and dev checkpoint-selection protocol.
 
+Active Research V1 Axis 2-5 final configs are root-level `_final.yaml` files aligned to the stable protocol. Older 100k or old-buffer variants are under `configs/research_v1/screening/` and are not final-axis configs.
+
 Final guides:
 
 ```text

@@ -78,45 +78,44 @@ python scripts/check_research_v1_ready.py \
 
 ## 7. Axis 1 Commands - Main Baselines
 
+Use the stable-protocol configs for fair Axis 1 claims. Older root `axis1_*.yaml` configs are historical/screening diagnostics.
+
 ```bash
-python scripts/train.py --config configs/research_v1/axis1_naive.yaml
-python scripts/train.py --config configs/research_v1/axis1_fixed_budget.yaml
-python scripts/train.py --config configs/research_v1/axis1_fasb.yaml
+python scripts/train.py --config configs/research_v1/axis1_naive_stable_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fixed_budget_stable_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fasb_stable_final.yaml
 ```
 
 ## 8. Axis 2 Commands - Sampler Ablation
 
+The root-level `_final.yaml` config is the active 300k final config aligned to the stable protocol. Older 100k sampler screens live under `configs/research_v1/screening/`.
+
 ```bash
-python scripts/train.py --config configs/research_v1/axis2_sampler_uniform.yaml
-python scripts/train.py --config configs/research_v1/axis2_sampler_mixed030.yaml
-python scripts/train.py --config configs/research_v1/axis2_sampler_mixed060.yaml
-python scripts/train.py --config configs/research_v1/axis2_sampler_mixed090.yaml
-python scripts/train.py --config configs/research_v1/axis2_sampler_mixed100.yaml
+python scripts/train.py --config configs/research_v1/axis2_sampler_mixed060_final.yaml
 ```
 
 ## 9. Axis 3 Commands - Budget/Penalty Ablation
 
+The active final config preserves the stable optimizer, sampler, checkpoint, buffer, seeds, horizon, and traffic settings; Axis 3 variants may change only budget and penalty settings. Older 100k budget screens live under `configs/research_v1/screening/`.
+
 ```bash
-python scripts/train.py --config configs/research_v1/axis3_budget_fixed003.yaml
-python scripts/train.py --config configs/research_v1/axis3_budget_fixed005.yaml
-python scripts/train.py --config configs/research_v1/axis3_budget_fixed010.yaml
-python scripts/train.py --config configs/research_v1/axis3_budget_adaptive_default.yaml
-python scripts/train.py --config configs/research_v1/axis3_budget_adaptive_strict.yaml
-python scripts/train.py --config configs/research_v1/axis3_budget_adaptive_loose.yaml
+python scripts/train.py --config configs/research_v1/axis3_budget_adaptive_default_final.yaml
 ```
 
 ## 10. Axis 4 Commands - Cost-Function Ablation
 
+The active final config preserves the stable protocol; Axis 4 variants may change only `cost_function`. Older 100k cost screens live under `configs/research_v1/screening/`.
+
 ```bash
-python scripts/train.py --config configs/research_v1/axis4_cost_crash_only.yaml
-python scripts/train.py --config configs/research_v1/axis4_cost_default.yaml
-python scripts/train.py --config configs/research_v1/axis4_cost_nearmiss_heavy.yaml
+python scripts/train.py --config configs/research_v1/axis4_cost_default_final.yaml
 ```
 
 ## 11. Axis 5 Commands - Failure Scorer/Generalization
 
+The active final config preserves the stable protocol except for the scorer. Older 100k scorer screens live under `configs/research_v1/screening/`.
+
 ```bash
-python scripts/train.py --config configs/research_v1/axis5_near_failure_scorer.yaml
+python scripts/train.py --config configs/research_v1/axis5_near_failure_scorer_final.yaml
 ```
 
 ## 12. Evaluation Template
@@ -124,7 +123,7 @@ python scripts/train.py --config configs/research_v1/axis5_near_failure_scorer.y
 ```bash
 python scripts/evaluate.py \
   --config configs/research_v1/base_eval.yaml \
-  --checkpoint runs/research_v1/<axis>_<variant>_s42/checkpoints/final.zip \
+  --checkpoint runs/research_v1/<axis>_<variant>_s42/checkpoints/selected_dev_best.zip \
   experiment.name=eval_<axis>_<variant>_s42 \
   experiment.output_dir=runs/research_v1/eval_<axis>_<variant>_s42 \
   metadrive.config.start_seed=5000 \

@@ -106,6 +106,8 @@ configs/research_v1/axis1_fasb_stable_final.yaml
 
 It keeps the method as SB3 PPO + failure-aware sampler + adaptive safety penalty, not PPO-Lagrangian. Axis 2 and Axis 3 should ablate sampler ratios and safety budgets around this calibrated default while preserving the shared optimizer/checkpoint-selection protocol for compared methods.
 
+For Axis 2-5, active final configs are root-level `_final.yaml` files aligned to the stable protocol. Older 100k or old-buffer variants are under `configs/research_v1/screening/` and must not be used as final-axis configs.
+
 ## Shared Artifact Distribution
 
 Required release:
