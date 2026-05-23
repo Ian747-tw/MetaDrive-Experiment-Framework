@@ -114,6 +114,15 @@ class CostFunctionWrapper(BaseWrapper):
         self.last_obs = None
 
     def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
+        reset = getattr(self.cost_function, "reset", None)
+        if callable(reset):
+            safe_call_component(
+                self.cost_function,
+                "reset",
+                "cost_function",
+                self.run_context,
+                self.error_dir,
+            )
         obs, info = self.env.reset(**kwargs)
         self.last_obs = obs
         return obs, info

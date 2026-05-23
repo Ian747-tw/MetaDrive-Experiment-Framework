@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from examples.custom_plugins.crash_only_cost import CrashOnlyCost
+from examples.custom_plugins.event_driving_cost import EventDrivingCost
 from examples.custom_plugins.first_seed_sampler import FirstSeedSampler
 from examples.custom_plugins.fixed_penalty_scheduler import FixedPenaltyScheduler
 from examples.custom_plugins.near_failure_scorer import NearFailureScorer
@@ -18,10 +19,27 @@ from fasb.schemas.outputs import FailureLabelOutput
 
 def test_research_cost_plugins_validate() -> None:
     info = {"crash": True, "out_of_road": True, "min_vehicle_distance": 2.5}
-    for plugin in (CrashOnlyCost(), NearMissHeavyCost()):
+    for plugin in (CrashOnlyCost(), NearMissHeavyCost(), EventDrivingCost()):
         output = plugin(None, None, 0.0, None, False, False, info)
         validate_cost_output(output)
         assert output.cost >= 0.0
+
+
+def test_event_driving_cost_charges_events_once_per_episode() -> None:
+    plugin = EventDrivingCost(near_miss_weight=0.0)
+    info = {"crash": True, "out_of_road": True}
+    first = plugin(None, None, 0.0, None, False, False, info)
+    second = plugin(None, None, 0.0, None, False, False, info)
+    plugin.reset()
+    after_reset = plugin(None, None, 0.0, None, False, False, info)
+
+    assert first.components["collision"] == 1.0
+    assert first.components["offroad"] == 1.0
+    assert first.cost == 2.0
+    assert second.components["collision"] == 0.0
+    assert second.components["offroad"] == 0.0
+    assert second.cost == 0.0
+    assert after_reset.cost == 2.0
 
 
 def test_near_failure_scorer_validates_and_clamps_risk() -> None:

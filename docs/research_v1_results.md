@@ -5,7 +5,7 @@
 ```bash
 python scripts/evaluate.py \
   --config configs/eval/heldout_random.yaml \
-  --checkpoint runs/research_v1/<method>/checkpoints/final.zip \
+  --checkpoint runs/research_v1/<method>/checkpoints/selected_dev_best.zip \
   experiment.name=eval_<method> \
   experiment.output_dir=runs/research_v1/eval_<method> \
   eval.n_episodes=100 \
@@ -44,7 +44,7 @@ runs/research_v1/summary_failure_by_mode.csv
 
 ## Table Interpretation
 
-FASB beats normal fine-tuning only if it uses the same compute, base checkpoint, train seed range, eval seed range, horizon, traffic density, and evaluation protocol. Do not cherry-pick a safety metric if success or route completion collapses. Report `safety_efficiency_score`, success/completion, raw cost, collision/offroad/timeout rates, and failure-mode breakdown together.
+FASB beats normal fine-tuning only if it uses the same compute, optimizer regime, checkpoint-selection policy, base checkpoint, train seed range, eval seed range, horizon, traffic density, and evaluation protocol. Do not cherry-pick a safety metric if success or route completion collapses. Report `safety_efficiency_score`, success/completion, raw cost, collision/offroad/timeout rates, and failure-mode breakdown together.
 
 ## Shared Artifact Distribution
 

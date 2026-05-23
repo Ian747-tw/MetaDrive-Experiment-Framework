@@ -1,4 +1,4 @@
-experiment: {name: axis3_budget_adaptive_default_final_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/axis3_budget_adaptive_default_final_s42, save_resolved_config: true}
+experiment: {name: fasb_stable_default_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/fasb_stable_default_s42, save_resolved_config: true}
 mode: fasb_ppo
 metadrive: {env_class: metadrive.envs.MetaDriveEnv, config: {start_seed: 2000, num_scenarios: 500, traffic_density: 0.1, random_traffic: true, use_render: false, horizon: 500, log_level: 50, crash_vehicle_done: false, crash_object_done: false, out_of_road_done: false}}
 vec_env: {type: dummy, n_envs: 1, start_method: forkserver}

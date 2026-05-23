@@ -13,32 +13,70 @@ large buffer:    runs/research_v1/base_explore_large/buffers/failure_buffer.json
 
 ## Axis 1 - Main Comparison
 
-Goal: show FASB-PPO beats normal PPO fine-tuning and fixed-budget fine-tuning under the same base checkpoint, buffer, timesteps, train/eval seeds, and horizon.
+Goal: show FASB-PPO beats normal PPO fine-tuning and fixed-budget fine-tuning under the same base checkpoint, buffer, timesteps, train/eval seeds, horizon, optimizer regime, and checkpoint-selection policy.
 
 Methods:
 
 ```text
 Base checkpoint eval
-Naive FT 300k
-Fixed-budget FT 300k
-FASB-PPO 300k
+Naive FT stable protocol 300k
+Fixed-budget FT stable protocol 300k
+Original FASB-PPO 300k
+Stable FASB-PPO 300k
 ```
 
-Allowed variables: `mode`, method config, and method-specific safety-budget behavior. Not allowed: base checkpoint, large buffer path, total timesteps, train/eval seeds, horizon, traffic density, PPO hyperparameters unless changed for every compared method.
+Allowed variables: `mode`, method config, sampler policy, and method-specific safety-budget behavior. Not allowed: base checkpoint, large buffer path, total timesteps, train/eval seeds, horizon, traffic density, optimizer regime, or checkpoint-selection policy.
+
+The historical `configs/research_v1/axis1_fasb_final.yaml` is retained as the original collapsed default. The stabilized default is `configs/research_v1/axis1_fasb_stable_final.yaml`, selected after 300k dev calibration on `start_seed=4500`, `num_scenarios=100`, without using the final heldout range for selection. It uses gentler failure replay and penalty settings:
+
+```text
+sampler.failure_ratio=0.05
+safety_budget.d_min=0.10
+safety_budget.d_max=0.30
+safety_budget.timeout_budget=0.30
+penalty_scheduler.lambda_min=0.0
+penalty_scheduler.lambda_max=0.25
+algorithm.params.learning_rate=0.00003
+```
+
+Axis 2 and Axis 3 ablations should vary sampler and budget/penalty settings around this calibrated stable default while continuing to report the original collapse as a diagnostic result.
+
+The fair Axis 1 comparison uses the same stable optimizer and dev checkpoint-selection protocol for all fine-tuned methods. Use:
+
+```text
+configs/research_v1/axis1_naive_stable_final.yaml
+configs/research_v1/axis1_fixed_budget_stable_final.yaml
+configs/research_v1/axis1_fasb_stable_final.yaml
+```
+
+Old configs with `linear:3.0e-4` are historical diagnostics, not the fair stable-protocol comparison.
 
 Commands:
 
 ```bash
-python scripts/train.py --config configs/research_v1/axis1_naive_final.yaml
-python scripts/train.py --config configs/research_v1/axis1_fixed_budget_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_naive_stable_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fixed_budget_stable_final.yaml
 python scripts/train.py --config configs/research_v1/axis1_fasb_final.yaml
+python scripts/train.py --config configs/research_v1/axis1_fasb_stable_final.yaml
 ```
 
-Evaluate each method:
+Select dev-best checkpoints for each stable-protocol fine-tuned method before final heldout:
+
+```bash
+python scripts/select_best_checkpoint.py \
+  --run-dir runs/research_v1/<method>_s42 \
+  --eval-config configs/eval/heldout_random.yaml \
+  --output-dir runs/research_v1/stabilization/select_<method>_s42 \
+  --metric safety_efficiency_score \
+  --eval-start-seed 4500 --eval-num-scenarios 100 \
+  --eval-episodes 100 --horizon 500 --traffic-density 0.1
+```
+
+Evaluate selected checkpoints:
 
 ```bash
 python scripts/evaluate.py --config configs/eval/heldout_random.yaml \
-  --checkpoint runs/research_v1/<method>_s42/checkpoints/final.zip \
+  --checkpoint runs/research_v1/<method>_s42/checkpoints/selected_dev_best.zip \
   experiment.name=eval_<method>_s42 \
   experiment.output_dir=runs/research_v1/eval_<method>_s42 \
   eval.n_episodes=100 metadrive.config.start_seed=5000 \
@@ -96,7 +134,7 @@ Mixed 0.9
 Mixed 1.0
 ```
 
-Allowed variables: `sampler._target_`, `sampler.failure_ratio`, `sampler.alpha`. Screening: 100k. Final: best 1-2 ratios at 300k. Not allowed: changing base checkpoint, final buffer, train/eval seeds, horizon, traffic density, or PPO hyperparameters for one variant only.
+Allowed variables: `sampler._target_`, `sampler.failure_ratio`, `sampler.alpha`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, checkpoint, buffer, budget, penalty, train/eval seeds, horizon, and traffic settings. Not allowed: changing base checkpoint, final buffer, train/eval seeds, horizon, traffic density, budget/penalty, cost/scorer, or PPO hyperparameters for one variant only.
 
 Claim: failure-aware replay improves specialization; too much replay may overfit or forget general driving.
 
@@ -117,7 +155,7 @@ adaptive strict
 adaptive loose
 ```
 
-Allowed variables: `safety_budget.*` and `penalty_scheduler.*`. Not allowed: sampler ratio, final buffer, base checkpoint, train/eval seeds, horizon, traffic density, or total timesteps.
+Allowed variables: `safety_budget.*` and `penalty_scheduler.*`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, sampler ratio, final buffer, base checkpoint, train/eval seeds, horizon, traffic density, and total timesteps.
 
 Claim: adaptive budget better balances safety and progress than fixed global penalty.
 
@@ -135,7 +173,7 @@ DefaultDrivingCost
 NearMissHeavyCost
 ```
 
-Allowed variables: `cost_function.*`. Not allowed: scorer, classifier, sampler, safety budget, train/eval seeds, base checkpoint, buffer, timesteps.
+Allowed variables: `cost_function.*`. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, scorer, classifier, sampler, safety budget, train/eval seeds, base checkpoint, buffer, and timesteps.
 
 Claim: richer pre-crash safety cost may improve safety but can increase conservatism.
 
@@ -154,7 +192,7 @@ canonical buffer vs optional dense buffer
 heldout random vs dense/easy traffic eval
 ```
 
-Allowed variables: `failure_scorer.*`, `failure_classifier.*`, eval `traffic_density`, and axis-specific buffers only when explicitly studying buffer or distribution shift. Not allowed: changing total timesteps, base checkpoint, or train/eval seed ranges in the same comparison.
+Allowed variables: `failure_scorer.*`, `failure_classifier.*`, eval `traffic_density`, and axis-specific buffers only when explicitly labeled as a buffer/distribution-shift experiment. Screening configs live under `configs/research_v1/screening/`. Final configs stay at 300k and must keep the calibrated stable optimizer, sampler, safety budget, penalty schedule, total timesteps, base checkpoint, and train/eval seed ranges in the same comparison.
 
 Claim: failure discovery quality and target-distribution shift affect specialization.
 

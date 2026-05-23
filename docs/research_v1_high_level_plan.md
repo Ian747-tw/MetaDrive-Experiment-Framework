@@ -6,7 +6,7 @@ Failure-aware scenario replay plus adaptive safety penalties improves safety-spe
 
 ## Five Axes
 
-Axis 1 proves the main effect: naive fine-tuning vs fixed-budget fine-tuning vs FASB-PPO.
+Axis 1 proves the main effect: naive fine-tuning vs fixed-budget fine-tuning vs FASB-PPO under the same optimizer regime and dev checkpoint-selection protocol.
 
 Axis 2 explains the sampler and replay contribution by varying failure replay ratio and priority.
 
@@ -18,11 +18,13 @@ Axis 5 studies failure definition and generalization under scorer/classifier and
 
 ## Integration
 
-Axis 1 is the main comparison table. Axes 2-5 explain why the main method works, where it fails, and which design choices matter. All axes use the same base checkpoint, canonical large failure buffer, final timesteps, train seeds, eval seeds, horizon, and traffic density unless the axis explicitly studies one of those variables.
+Axis 1 is the main comparison table. Axes 2-5 explain why the main method works, where it fails, and which design choices matter. All axes use the same base checkpoint, canonical large failure buffer, final timesteps, train seeds, eval seeds, horizon, traffic density, optimizer regime, and checkpoint-selection policy unless the axis explicitly studies one of those variables.
 
 ## Screening Vs Final Phase
 
-Screening runs may use 100k timesteps to discard weak variants. Final runs use 300k timesteps for every compared method in the same table. Never compare a 300k FASB run to a 100k naive run.
+Screening runs may use 100k timesteps to discard weak variants. Final runs use 300k timesteps for every compared method in the same table. Never compare a 300k FASB run to a 100k naive run, or a calibrated low-LR FASB run to old higher-LR naive/fixed baselines when optimizer is not the research variable.
+
+For the stable FASB default, use `learning_rate=0.00003` and select checkpoints on dev seeds (`start_seed=4500`, `num_scenarios=100`) for all fine-tuned methods before final heldout evaluation.
 
 ## Compute Allocation
 

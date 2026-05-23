@@ -1,14 +1,14 @@
-experiment: {name: axis3_budget_adaptive_default_final_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/axis3_budget_adaptive_default_final_s42, save_resolved_config: true}
+experiment: {name: fasb_eventcost_ratio030_penalty050_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/stabilization/fasb_eventcost_ratio030_penalty050_s42, save_resolved_config: true}
 mode: fasb_ppo
 metadrive: {env_class: metadrive.envs.MetaDriveEnv, config: {start_seed: 2000, num_scenarios: 500, traffic_density: 0.1, random_traffic: true, use_render: false, horizon: 500, log_level: 50, crash_vehicle_done: false, crash_object_done: false, out_of_road_done: false}}
 vec_env: {type: dummy, n_envs: 1, start_method: forkserver}
 algorithm: {backend: sb3, name: PPO, policy: MlpPolicy, checkpoint_path: runs/research_v1/base_pretrain_s42/checkpoints/final.zip, params: {learning_rate: 0.00003, n_steps: 128, batch_size: 64, n_epochs: 10, gamma: 0.99, gae_lambda: 0.95, clip_range: 0.2, ent_coef: 0.0, vf_coef: 0.5, max_grad_norm: 0.5, verbose: 1, device: cpu, policy_kwargs: {net_arch: [256, 256]}}}
 training: {total_timesteps: 300000, save_every_steps: 100000, eval_every_steps: 0}
 failure_buffer: {path: runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl, max_size: 5000}
-cost_function: {_target_: fasb.plugins.cost.DefaultDrivingCost}
+cost_function: {_target_: examples.custom_plugins.event_driving_cost.EventDrivingCost}
 failure_scorer: {_target_: fasb.plugins.failure_scorer.DefaultFailureScorer}
 failure_classifier: {_target_: fasb.plugins.failure_classifier.DefaultFailureClassifier}
-safety_budget: {_target_: fasb.plugins.safety_budget.AdaptiveSafetyBudget, d_min: 0.10, d_max: 0.30, timeout_budget: 0.30}
-penalty_scheduler: {_target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler, lambda_min: 0.0, lambda_max: 0.25}
-sampler: {_target_: fasb.plugins.sampler.MixedFailureSampler, start_seed: 2000, num_scenarios: 500, failure_ratio: 0.05, alpha: 0.7, max_too_hard_ratio: 0.15}
+safety_budget: {_target_: fasb.plugins.safety_budget.AdaptiveSafetyBudget, d_min: 0.08, d_max: 0.25, timeout_budget: 0.30}
+penalty_scheduler: {_target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler, lambda_min: 0.0, lambda_max: 0.50}
+sampler: {_target_: fasb.plugins.sampler.MixedFailureSampler, start_seed: 2000, num_scenarios: 500, failure_ratio: 0.30, alpha: 0.7, max_too_hard_ratio: 0.15}
 eval: {n_episodes: 100}

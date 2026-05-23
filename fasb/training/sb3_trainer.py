@@ -163,11 +163,18 @@ class SB3Trainer:
     def _build_model(self, env: Any):
         from stable_baselines3 import PPO
 
-        checkpoint_path = self.config.algorithm.get("checkpoint_path")
-        if checkpoint_path and Path(str(checkpoint_path)).exists():
-            return PPO.load(str(checkpoint_path), env=env)
         params = OmegaConf.to_container(self.config.algorithm.get("params", {}), resolve=True) or {}
         for key in ("learning_rate", "clip_range", "clip_range_vf"):
             if key in params:
                 params[key] = _coerce_schedule(params[key])
+
+        checkpoint_path = self.config.algorithm.get("checkpoint_path")
+        if checkpoint_path and Path(str(checkpoint_path)).exists():
+            load_params = {key: value for key, value in params.items() if key not in {"device", "policy_kwargs"}}
+            return PPO.load(
+                str(checkpoint_path),
+                env=env,
+                device=params.get("device", "auto"),
+                **load_params,
+            )
         return PPO(self.config.algorithm.get("policy", "MlpPolicy"), env, **params)

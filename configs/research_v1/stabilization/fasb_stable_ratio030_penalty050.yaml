@@ -1,4 +1,4 @@
-experiment: {name: axis3_budget_adaptive_default_final_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/axis3_budget_adaptive_default_final_s42, save_resolved_config: true}
+experiment: {name: fasb_stable_ratio030_penalty050_s42, mode: fasb_ppo, seed: 42, output_dir: runs/research_v1/stabilization/fasb_stable_ratio030_penalty050_s42, save_resolved_config: true}
 mode: fasb_ppo
 metadrive: {env_class: metadrive.envs.MetaDriveEnv, config: {start_seed: 2000, num_scenarios: 500, traffic_density: 0.1, random_traffic: true, use_render: false, horizon: 500, log_level: 50, crash_vehicle_done: false, crash_object_done: false, out_of_road_done: false}}
 vec_env: {type: dummy, n_envs: 1, start_method: forkserver}
@@ -8,7 +8,7 @@ failure_buffer: {path: runs/research_v1/base_explore_large/buffers/failure_buffe
 cost_function: {_target_: fasb.plugins.cost.DefaultDrivingCost}
 failure_scorer: {_target_: fasb.plugins.failure_scorer.DefaultFailureScorer}
 failure_classifier: {_target_: fasb.plugins.failure_classifier.DefaultFailureClassifier}
-safety_budget: {_target_: fasb.plugins.safety_budget.AdaptiveSafetyBudget, d_min: 0.10, d_max: 0.30, timeout_budget: 0.30}
-penalty_scheduler: {_target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler, lambda_min: 0.0, lambda_max: 0.25}
-sampler: {_target_: fasb.plugins.sampler.MixedFailureSampler, start_seed: 2000, num_scenarios: 500, failure_ratio: 0.05, alpha: 0.7, max_too_hard_ratio: 0.15}
+safety_budget: {_target_: fasb.plugins.safety_budget.AdaptiveSafetyBudget, d_min: 0.08, d_max: 0.25, timeout_budget: 0.30}
+penalty_scheduler: {_target_: fasb.plugins.penalty_scheduler.RiskPenaltyScheduler, lambda_min: 0.0, lambda_max: 0.50}
+sampler: {_target_: fasb.plugins.sampler.MixedFailureSampler, start_seed: 2000, num_scenarios: 500, failure_ratio: 0.30, alpha: 0.7, max_too_hard_ratio: 0.15}
 eval: {n_episodes: 100}

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from omegaconf import OmegaConf
+
 from scripts.check_research_v1_ready import commands
 
 
@@ -55,3 +57,38 @@ def test_research_v1_ready_commands_preserve_absolute_shallow_paths() -> None:
     assert "--checkpoint /tmp/final.zip" in output
     assert "--eval-csv /tmp/eval.csv" in output
     assert "--buffer /tmp/failure_buffer.jsonl" in output
+
+
+def test_axis2_to_axis5_final_configs_use_stable_protocol() -> None:
+    root = Path("configs/research_v1")
+    final_configs = sorted(root.glob("axis[2-5]*_final.yaml"))
+    assert final_configs
+
+    for path in final_configs:
+        raw = path.read_text(encoding="utf-8")
+        assert "linear:3.0e-4" not in raw
+        assert "runs/research_v1/base_explore/buffers/failure_buffer.jsonl" not in raw
+        assert "d_min: 0.02" not in raw
+        assert "d_max: 0.10" not in raw
+        assert "timeout_budget: 0.07" not in raw
+        assert "lambda_min: 0.1" not in raw
+        assert "lambda_max: 5.0" not in raw
+
+        cfg = OmegaConf.load(path)
+        assert cfg.algorithm.checkpoint_path == "runs/research_v1/base_pretrain_s42/checkpoints/final.zip"
+        assert cfg.algorithm.params.learning_rate == 0.00003
+        assert cfg.algorithm.params.device == "cpu"
+        assert int(cfg.training.total_timesteps) == 300000
+        assert cfg.failure_buffer.path == "runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl"
+        assert int(cfg.metadrive.config.start_seed) == 2000
+        assert int(cfg.metadrive.config.num_scenarios) == 500
+        assert int(cfg.metadrive.config.horizon) == 500
+        assert float(cfg.metadrive.config.traffic_density) == 0.1
+
+        if "axis2_" not in path.name:
+            assert float(cfg.sampler.failure_ratio) == 0.05
+        assert float(cfg.safety_budget.d_min) == 0.10
+        assert float(cfg.safety_budget.d_max) == 0.30
+        assert float(cfg.safety_budget.timeout_budget) == 0.30
+        assert float(cfg.penalty_scheduler.lambda_min) == 0.0
+        assert float(cfg.penalty_scheduler.lambda_max) == 0.25
