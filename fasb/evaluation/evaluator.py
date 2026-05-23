@@ -115,6 +115,7 @@ class Evaluator:
             if path.exists():
                 device = self.config.get("algorithm", {}).get("params", {}).get("device", "cpu")
                 return PPO.load(str(path), env=env, device=device)
+            raise FileNotFoundError(f"Checkpoint not found: {path}")
         return RandomPolicy(env.action_space)
 
     def _write_metrics_csv(self, scenario_set: str, metrics: dict[str, float]) -> None:

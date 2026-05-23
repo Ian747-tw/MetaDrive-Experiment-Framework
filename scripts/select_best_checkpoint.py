@@ -200,8 +200,8 @@ def main() -> int:
     write_report(output_dir / "checkpoint_selection_report.md", rows, selected, args.metric)
     if selected is None:
         print("No checkpoint passed hard reject screen")
-    else:
-        print(f"Selected checkpoint: {selected['checkpoint']}")
+        return 1
+    print(f"Selected checkpoint: {selected['checkpoint']}")
     return 0
 
 
