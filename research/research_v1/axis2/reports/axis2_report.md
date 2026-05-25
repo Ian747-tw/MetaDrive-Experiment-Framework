@@ -35,7 +35,7 @@ Source: `results/final_eval/*_heldout_random.csv` and `results/summary/multiseed
 
 ## Analysis
 
-`mixed030` is the best single-seed result by safety-efficiency and cost. The stable default `mixed005` has the highest success and route completion, but it has higher offroad and higher cost than `mixed030`. High replay is clearly unsafe as a final default: `mixed060` has the lowest success, highest timeout, highest offroad, lowest route completion, and worst safety-efficiency.
+`mixed030` is the best available Axis 2 result by safety-efficiency and cost. The stable default `mixed005` has the highest success and route completion, but it has higher offroad and higher cost than `mixed030`. High replay is clearly unsafe as a final default: `mixed060` has the lowest success, highest timeout, highest offroad, lowest route completion, and worst safety-efficiency.
 
 The sampler result supports a bounded replay design. Failure-buffer examples can help, but replay should not dominate the training distribution. This also explains why the stable default uses `failure_ratio=0.05`: it is conservative and less likely to overfit. The `0.30` result is promising but should be repeated over more seeds before replacing the default.
 

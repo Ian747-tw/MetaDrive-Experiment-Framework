@@ -2,7 +2,7 @@
 
 ## 1. Abstract
 
-We present a reproducible research framework for safety-budgeted reinforcement learning fine-tuning in MetaDrive. The framework, developed by our team and released at https://github.com/Ian747-tw/MetaDrive-Experiment-Framework, trains a general PPO driving agent, builds a reusable failure buffer, and studies how failure-aware sampling, safety budgets, penalty schedules, cost definitions, and failure scorers affect safety-progress tradeoffs. Our method, FASB-PPO, keeps Stable-Baselines3 PPO as the optimizer and adds a scenario-level failure sampler plus a bounded adaptive safety penalty. Across five research axes, the current stable protocol reduces average collision, offroad, cost, and safety-efficiency penalties relative to naive PPO, but does not uniformly dominate it on success or route progress. The broader contribution is a controlled experiment platform: canonical artifacts, locked train/dev/test splits, dev-only checkpoint selection, plugin-based ablations, failure-mode analysis, and reviewer-ready result packages that make safety-budget research auditable rather than anecdotal.
+We present a reproducible research framework for safety-budgeted reinforcement learning fine-tuning in MetaDrive. The framework, developed by our team and released at https://github.com/Ian747-tw/MetaDrive-Experiment-Framework, trains a general PPO driving agent, builds a reusable failure buffer, and studies how failure-aware sampling, safety budgets, penalty schedules, cost definitions, and failure scorers affect safety-progress tradeoffs. Our method, FASB-PPO, keeps Stable-Baselines3 PPO as the optimizer and adds a scenario-level failure sampler plus a bounded adaptive safety penalty. Across five research axes, the current stable protocol reduces average collision, offroad, and episode cost, and improves the mean safety_efficiency_score (SES), but it does not uniformly dominate naive PPO on success or route progress. The broader contribution is a controlled experiment platform: canonical artifacts, locked train/dev/test splits, dev-only checkpoint selection, plugin-based ablations, failure-mode analysis, and reviewer-ready result packages that make safety-budget research auditable rather than anecdotal.
 
 ## 2. Introduction
 
@@ -45,7 +45,7 @@ Key terms:
 - `timeout_rate`: fraction of episodes that hit the horizon without success.
 - `route_completion_mean`: mean route progress.
 - `episode_cost_mean`: mean accumulated safety cost from the configured cost function.
-- `safety_efficiency_score`: summary score used for selection and comparison:
+- `safety_efficiency_score` (SES): summary score used for selection and comparison:
 
 ```text
 SES = success_rate - collision_rate - offroad_rate - 0.5 * timeout_rate
@@ -57,7 +57,7 @@ Higher SES is better. It is interpreted together with the raw metrics because a 
 
 PPO is a widely used policy-gradient algorithm that stabilizes updates through a clipped surrogate objective [1]. We keep PPO as the optimizer so that differences are attributable to sampling, safety costs, and safety budgets rather than to replacing the learning algorithm.
 
-Safe and constrained RL methods such as Constrained Policy Optimization study explicit cost constraints [2]. Safety Gym emphasizes benchmarking both task reward and safety costs [3]. Our work is related in motivation but not in formal guarantee: FASB-PPO does not solve a constrained optimization problem and should not be described as PPO-Lagrangian. It is a practical safety-budget wrapper around PPO.
+Safe and constrained RL methods such as Constrained Policy Optimization study explicit cost constraints [2]. OpenAI's safety exploration benchmark discussion emphasizes evaluating both task reward and safety costs [3]. Our work is related in motivation but not in formal guarantee: FASB-PPO does not solve a constrained optimization problem and should not be described as PPO-Lagrangian. It is a practical safety-budget wrapper around PPO.
 
 MetaDrive provides procedurally generated driving scenarios for generalizable autonomous-driving RL [4]. Stable-Baselines3 provides the PPO implementation used in this project [5]. Prioritized replay motivates the idea that difficult examples can carry more learning signal [6], but our replay unit is a driving scenario rather than an individual transition.
 
@@ -99,7 +99,7 @@ FASB-PPO changes the reward passed to PPO:
 r'_t = r_t - lambda_i * c_t
 ```
 
-where `r_t` is the original environment reward, `c_t >= 0` is the safety cost at step `t`, and `lambda_i` is the scenario-level penalty coefficient computed at reset for scenario `i`.
+where `r_t` is the original environment reward, `c_t >= 0` is the safety cost at step `t`, and `lambda_i` is the scenario-level penalty coefficient computed at reset for scenario `i`. The step cost `c_t` comes from the active cost-function plugin, such as `DefaultDrivingCost`, `CrashOnlyCost`, `NearMissHeavyCost`, or `EventDrivingCost`. The wrapper validates non-negative costs but does not normalize or clip them. Therefore `episode_cost_mean` is an accumulated cost and is most comparable when horizon and evaluation protocol are fixed, as they are within each axis.
 
 The adaptive safety budget is:
 
@@ -114,7 +114,9 @@ The penalty scheduler is:
 lambda_i = max(0, (lambda_min + (lambda_max - lambda_min) * risk_i) * m_i)
 ```
 
-where `risk_i` is the failure score in `[0, 1]` and `m_i` is a failure-mode multiplier. Higher risk therefore produces a stronger penalty, while progress-related failures receive a separate budget to reduce timeout collapse.
+where `risk_i` is the failure score in `[0, 1]` and `m_i` is a failure-mode multiplier. Higher risk therefore produces a stronger penalty.
+
+Implementation note. The current `RiskPenaltyScheduler` receives the budget object and records `d_i` in metadata, but its default coefficient is risk/mode based rather than a primal-dual update from `(cost - d_i)`. Thus `d_i` is part of the component interface and experiment logging, while the active reward shaping is controlled directly by `lambda_i * c_t`. Axis 3 should therefore be read as a safety-budget/penalty component ablation, not as evidence for formal constrained optimization.
 
 The failure-aware sampler chooses scenarios as:
 
@@ -133,9 +135,9 @@ Otherwise, it samples a random MetaDrive scenario from the active training range
 | `failure_ratio` | `0.05` | Probability of replaying a failure-buffer scenario | Higher values increase failure specialization but can overfit or reduce progress. Axis 2 shows high replay is risky. |
 | `alpha` | `0.7` | Priority sharpness inside the failure buffer | Larger values emphasize high-priority failures more strongly. |
 | `max_too_hard_ratio` | `0.15` | Cap on overly difficult replay cases | Prevents replay from being dominated by failures the current policy cannot learn from. |
-| `d_min` | `0.10` | Minimum adaptive safety budget | Lower values make safety pressure stricter for high-risk non-timeout failures. |
-| `d_max` | `0.30` | Maximum adaptive safety budget | Higher values make the adaptive budget more tolerant for low-risk cases. |
-| `timeout_budget` | `0.30` | Budget for timeout/low-progress cases | Keeps progress failures from receiving overly harsh collision-style penalties. |
+| `d_min` | `0.10` | Minimum adaptive safety budget | Sets the lower bound of the budget reported to the scheduler/logs; only affects penalty strength when the selected scheduler uses the budget value directly. |
+| `d_max` | `0.30` | Maximum adaptive safety budget | Sets the upper bound of the reported adaptive budget; useful for budget ablations and scheduler variants. |
+| `timeout_budget` | `0.30` | Budget for timeout/low-progress cases | Separates progress failures from collision/offroad failures in the budget interface. |
 | `lambda_min` | `0.0` | Minimum penalty coefficient | Allows low-risk scenarios to receive no extra safety penalty. |
 | `lambda_max` | `0.25` | Maximum base penalty coefficient | Bounds the cost penalty so the policy does not freeze. |
 
@@ -162,6 +164,10 @@ route_completion_mean < 0.40
 timeout_rate > 0.80
 ```
 
+These thresholds are engineering guardrails against selecting a checkpoint that obtains a high-looking SES only by freezing or making negligible route progress. They were not tuned on final heldout. A full sensitivity analysis over thresholds is future work; for this study the thresholds are fixed before final evaluation and applied uniformly across methods.
+
+Evaluation uses `eval.n_episodes` rollouts. For each rollout `i`, the evaluator resets MetaDrive with a deterministic scenario seed from the configured range starting at `start_seed`. Thus dev uses 100 rollouts over the dev seed range, while final heldout uses 100 rollouts drawn from a larger 200-scenario heldout range; the 200-scenario setting defines the scenario pool, not the number of rollouts.
+
 The final heldout range is used only after selection.
 
 ### 4.5 Axes
@@ -178,7 +184,7 @@ The final heldout range is used only after selection.
 
 ### 5.1 Reading the Figures
 
-All central figures include success rate, collision rate, and safety-efficiency score. Unless otherwise stated, bars are means over repeated final-heldout evaluations and whiskers are standard deviations. Axis 2 is a single-seed screen, so it has no whiskers. Higher is better for success and safety-efficiency; lower is better for collision.
+All central figures include success rate, collision rate, and safety_efficiency_score (SES). Unless otherwise stated, bars are means over repeated final-heldout evaluations and whiskers are standard deviations. Axis 2 currently reports point estimates from the available final-heldout runs, so it has no whiskers. Higher is better for success and SES; lower is better for collision.
 
 ### 5.2 Axis 1: Main Comparison
 
@@ -188,7 +194,7 @@ Axis 1 compares normal PPO fine-tuning against stable FASB-PPO. The fair multise
 
 Figure 1 shows mean +/- std over six paired training seeds, with checkpoints selected on dev and evaluated once on final heldout.
 
-| method | success | collision | offroad | timeout | route | cost | safety_eff |
+| method | success | collision | offroad | timeout | route | cost | safety_efficiency_score (SES) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Naive PPO | 0.440 +/- 0.041 | 0.257 +/- 0.056 | 0.488 +/- 0.060 | 0.560 +/- 0.041 | 0.6981 +/- 0.0327 | 267.99 +/- 17.71 | -0.585 +/- 0.123 |
 | Stable FASB-PPO | 0.435 +/- 0.034 | 0.230 +/- 0.042 | 0.467 +/- 0.045 | 0.565 +/- 0.034 | 0.6879 +/- 0.0189 | 252.10 +/- 6.00 | -0.544 +/- 0.060 |
@@ -215,16 +221,16 @@ Axis 2 varies only `failure_ratio`. It asks whether more failure replay improves
 
 ![Axis 2 sampler ablation](charts/axis2_sampler_ablation.svg)
 
-Figure 2 is a single-seed final-heldout screen, so bars are point estimates rather than multiseed means.
+Figure 2 shows that aggressive failure replay can hurt the success rate; bars are final-heldout point estimates from the available Axis 2 runs.
 
-| variant | failure ratio | success | collision | offroad | timeout | route | cost | safety_eff |
+| variant | failure ratio | success | collision | offroad | timeout | route | cost | safety_efficiency_score (SES) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | mixed005 | 0.05 | 0.48 | 0.28 | 0.49 | 0.52 | 0.7067 | 260.50 | -0.550 |
 | mixed030 | 0.30 | 0.47 | 0.28 | 0.44 | 0.53 | 0.6978 | 239.82 | -0.515 |
 | mixed060 | 0.60 | 0.35 | 0.18 | 0.59 | 0.65 | 0.6298 | 277.59 | -0.745 |
 | mixed090 | 0.90 | 0.42 | 0.25 | 0.48 | 0.58 | 0.7004 | 253.22 | -0.600 |
 
-Interpretation. Moderate replay (`0.30`) screens best on SES and cost, while high replay (`0.60`) sharply reduces success and route completion. The likely mechanism is distribution imbalance: too much replay concentrates training on difficult failures and weakens broad driving behavior. The constructive lesson is to keep failure replay controlled and validate any larger replay ratio over multiple seeds before adopting it as a default.
+Interpretation. Moderate replay (`0.30`) gives the best SES and cost in the available Axis 2 results, while high replay (`0.60`) sharply reduces success and route completion. The likely mechanism is distribution imbalance: too much replay concentrates training on difficult failures and weakens broad driving behavior. The constructive lesson is to keep failure replay controlled and validate any larger replay ratio before adopting it as a default.
 
 ### 5.4 Axis 3: Safety Budget and Penalty
 
@@ -234,7 +240,7 @@ Axis 3 is the core safety-budget axis. It varies only the budget and penalty sch
 
 Figure 3 shows mean +/- std over ten repetitions.
 
-| variant | success | collision | offroad | timeout | route | cost | safety_eff |
+| variant | success | collision | offroad | timeout | route | cost | safety_efficiency_score (SES) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | fixed005 | 0.487 +/- 0.068 | 0.260 +/- 0.065 | 0.386 +/- 0.069 | 0.513 +/- 0.068 | 0.7067 +/- 0.0395 | 244.83 +/- 20.56 | -0.416 +/- 0.166 |
 | fixed003 | 0.456 +/- 0.070 | 0.239 +/- 0.045 | 0.424 +/- 0.085 | 0.545 +/- 0.071 | 0.7083 +/- 0.0364 | 252.41 +/- 24.58 | -0.480 +/- 0.177 |
@@ -247,7 +253,7 @@ Figure 3 shows mean +/- std over ten repetitions.
 
 Figure 4 shows the clearest standard-deviation finding: the adaptive default has much higher SES variance than the best fixed budget.
 
-Interpretation. The adaptive-budget hypothesis is not supported by this suite. The best variant is `fixed005`, which has the highest success, lowest offroad, lowest cost, and best SES. The adaptive default has the lowest collision rate, but that is not a useful win because it also has the highest timeout and worst SES; it appears to avoid collisions partly by reducing productive driving. The lesson for future FASB work is to separate "low collision" from "good safety": a fixed, moderate budget can be more reliable than a dynamic budget if the adaptive rule overreacts to risk.
+Interpretation. The current adaptive-budget implementation is not supported by this suite. This does not contradict the framework design: FASB exposes a budget component, but the default scheduler uses risk and failure mode rather than a direct `(cost - budget)` feedback update. Under this implementation, `fixed005` is the best budget/penalty configuration: it has the highest success, lowest offroad, lowest cost, and best SES. The adaptive default has the lowest collision rate, but that is not a useful win because it also has the highest timeout and worst SES; it appears to avoid collisions partly by reducing productive driving. The lesson for future FASB work is to either use a simple fixed penalty budget or implement a scheduler that explicitly maps budget violation into `lambda_i`, then test it under the same protocol.
 
 ### 5.5 Axis 4: Cost Function
 
@@ -257,7 +263,7 @@ Axis 4 varies only the safety cost function.
 
 Figure 5 shows mean +/- std over three seeds.
 
-| cost function | success | collision | offroad | timeout | route | cost | safety_eff |
+| cost function | success | collision | offroad | timeout | route | cost | safety_efficiency_score (SES) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | DefaultDrivingCost | 0.507 +/- 0.042 | 0.267 +/- 0.015 | 0.410 +/- 0.062 | 0.493 +/- 0.042 | 0.7138 +/- 0.0314 | 251.22 +/- 13.95 | -0.417 +/- 0.055 |
 | EventDrivingCost | 0.490 +/- 0.035 | 0.300 +/- 0.090 | 0.390 +/- 0.062 | 0.510 +/- 0.035 | 0.7018 +/- 0.0299 | 237.74 +/- 6.33 | -0.455 +/- 0.069 |
@@ -274,14 +280,14 @@ Axis 5 varies the failure scorer and adds a small traffic-density shift study.
 
 Figure 6 shows mean +/- std over four runs.
 
-| scorer | success | collision | offroad | timeout | route | cost | safety_eff |
+| scorer | success | collision | offroad | timeout | route | cost | safety_efficiency_score (SES) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | NearFailureScorer | 0.453 +/- 0.070 | 0.260 +/- 0.039 | 0.445 +/- 0.058 | 0.550 +/- 0.067 | 0.6872 +/- 0.0311 | 252.78 +/- 13.44 | -0.528 +/- 0.134 |
 | DefaultFailureScorer | 0.433 +/- 0.051 | 0.228 +/- 0.044 | 0.488 +/- 0.045 | 0.568 +/- 0.051 | 0.6813 +/- 0.0248 | 256.29 +/- 19.57 | -0.566 +/- 0.100 |
 
 Paired near-failure-minus-default deltas:
 
-| seed | delta safety_eff | delta success | delta collision | delta offroad | delta timeout | delta cost |
+| seed | delta SES | delta success | delta collision | delta offroad | delta timeout | delta cost |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 42 | +0.130 | +0.08 | +0.11 | -0.12 | -0.08 | +3.63 |
 | 2000 | -0.150 | -0.08 | +0.04 | -0.01 | +0.08 | -1.25 |
@@ -295,8 +301,8 @@ Interpretation. `NearFailureScorer` is marginally better on mean SES, success, o
 | axis | main finding | research lesson |
 | --- | --- | --- |
 | Axis 1 | FASB improves average safety/cost but not paired dominance. | Safety-budgeted PPO should be reported as a tradeoff, not a blanket improvement. |
-| Axis 2 | Aggressive replay is risky in the current screen. | Failure replay should remain controlled and needs multiseed validation before adoption. |
-| Axis 3 | Fixed budget `0.05` beats adaptive budget variants. | Current adaptive budgeting is not the best safety-budget mechanism; simple budgets can be stronger. |
+| Axis 2 | Aggressive replay hurts success in the available runs. | Failure replay should remain controlled and should be validated before adoption. |
+| Axis 3 | Fixed budget `0.05` beats the current adaptive-budget variants. | The active scheduler does not directly optimize budget violation; simple fixed penalties are stronger in this implementation. |
 | Axis 4 | Default cost is best balanced. | Cost shaping is load-bearing; overly sparse or overly conservative costs hurt progress. |
 | Axis 5 | Near-failure scoring is marginal and not robust. | Scorer design matters, but it is weaker than budget and cost choices in this framework. |
 
@@ -306,7 +312,7 @@ Across axes, the strongest empirical conclusion is that safety-budgeted PPO is s
 
 This project develops a professional, reproducible framework for safety-budgeted PPO fine-tuning in MetaDrive. It includes our own trained general driving agent, canonical release artifacts, failure-buffer reuse, component validation, plugin-based FASB modules, dev-only checkpoint selection, and reviewer-ready result organization.
 
-The empirical findings are measured. Axis 1 shows stable FASB-PPO improves average safety/cost metrics but does not robustly beat naive PPO on paired success and progress. Axis 2 shows aggressive failure replay can hurt. Axis 3 shows the current adaptive safety budget is weaker than a simple fixed budget of `0.05`. Axis 4 shows default cost shaping is the best balanced cost signal. Axis 5 shows near-failure scoring is only marginally helpful and not robust across paired runs.
+The empirical findings are measured. Axis 1 shows stable FASB-PPO improves average safety/cost metrics but does not robustly beat naive PPO on paired success and progress. Axis 2 shows aggressive failure replay can hurt success. Axis 3 shows the current adaptive budget/scheduler combination is weaker than a simple fixed budget of `0.05`, partly because the active scheduler does not directly update `lambda_i` from budget violation. Axis 4 shows default cost shaping is the best balanced cost signal. Axis 5 shows near-failure scoring is only marginally helpful and not robust across paired runs.
 
 The main contribution is not a claim that FASB-PPO solves safe driving RL. The contribution is a reusable research framework and a disciplined protocol for testing safety-budget mechanisms around PPO. For the community, this is useful because it makes common safe-RL failure modes visible: timeout collapse, optimizer confounds, final-test over-selection, and misleading single-metric safety wins.
 

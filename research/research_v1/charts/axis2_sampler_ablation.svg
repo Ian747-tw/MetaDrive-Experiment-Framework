@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="1038" viewBox="0 0 1120 1038">
 <rect width="100%" height="100%" fill="#ffffff"/>
-<text x="560.0" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1d2733">Figure 2. Axis 2 sampler-ratio screen</text>
-<text x="560.0" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#52616f">Single-seed final-heldout screen varying only failure replay ratio; no std available.</text>
+<text x="560.0" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1d2733">Figure 2. Axis 2 sampler-ratio ablation</text>
+<text x="560.0" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#52616f">Final-heldout point estimates varying only failure replay ratio; no std available.</text>
 <text x="90" y="96" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#1d2733">Success rate</text>
 <line x1="90" y1="300.0" x2="1095" y2="300.0" stroke="#e7ebef" stroke-width="1"/>
 <text x="82" y="304.0" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="#6b7785">0.33</text>

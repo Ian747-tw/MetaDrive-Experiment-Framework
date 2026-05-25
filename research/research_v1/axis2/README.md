@@ -4,14 +4,14 @@ Axis 2 studies the failure-aware sampler by varying the failure replay ratio whi
 
 ## Current Status
 
-Axis 2 currently contains a single-seed final screen over replay ratios:
+Axis 2 currently contains final-heldout point estimates over replay ratios:
 
 ```text
 seed: 2000
 variants: mixed005, mixed030, mixed060, mixed090
 ```
 
-The result is useful as an ablation screen, but it is not a multiseed final claim.
+The result is useful as an ablation of replay-ratio behavior, but the conclusion should remain bounded to the available runs.
 
 ## Contents
 
@@ -33,4 +33,4 @@ reports/
 | mixed060 | 0.60 | 0.35 | 0.18 | 0.59 | 0.65 | 0.6298 | 277.59 | -0.745 |
 | mixed090 | 0.90 | 0.42 | 0.25 | 0.48 | 0.58 | 0.7004 | 253.22 | -0.600 |
 
-Interpretation: moderate replay (`0.30`) is best on this single seed by safety-efficiency and cost. High replay (`0.60`) hurts progress and increases timeout/offroad, showing that failure replay can become counterproductive if it dominates training.
+Interpretation: moderate replay (`0.30`) is best in the available Axis 2 runs by safety-efficiency and cost. High replay (`0.60`) hurts progress and increases timeout/offroad, showing that failure replay can become counterproductive if it dominates training.
