@@ -1,0 +1,25 @@
+experiment:
+  name: eval_axis3_fixed005_s42_rep09
+  seed: 42
+  output_dir: runs/research_v1/eval_axis3_fixed005_s42_rep09
+metadrive:
+  env_class: metadrive.envs.MetaDriveEnv
+  config:
+    start_seed: 5000
+    num_scenarios: 200
+    traffic_density: 0.1
+    random_traffic: true
+    use_render: false
+    horizon: 500
+    log_level: 50
+    crash_vehicle_done: false
+    crash_object_done: false
+    out_of_road_done: false
+algorithm:
+  checkpoint_path: null
+cost_function:
+  _target_: fasb.plugins.cost.DefaultDrivingCost
+eval:
+  scenario_set: heldout_random
+  n_episodes: 100
+  deterministic: true
