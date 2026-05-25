@@ -1,0 +1,2 @@
+n_episodes,success_rate,collision_rate,offroad_rate,timeout_rate,route_completion_mean,episode_reward_mean,episode_modified_reward_mean,episode_cost_mean,cost_violation_rate,avg_episode_length,safety_efficiency_score
+100.0,0.54,0.25,0.48,0.46,0.7435873973103867,-710.8482478869367,-710.8482478869367,265.34,0.0,423.79,-0.41999999999999993
