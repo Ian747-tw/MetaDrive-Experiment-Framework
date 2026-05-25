@@ -1,0 +1,9 @@
+seed,variant,run,selected_checkpoint,dev_success_rate,dev_collision_rate,dev_offroad_rate,dev_timeout_rate,dev_route_completion_mean,dev_episode_cost_mean,dev_safety_efficiency_score,success_rate,collision_rate,offroad_rate,timeout_rate,route_completion_mean,episode_cost_mean,cost_violation_rate,safety_efficiency_score
+42,axis5_default_scorer,axis5_default_scorer_seed42,latest_200000_steps.zip,0.43,0.17,0.5,0.57,0.6604184999996469,257.69,-0.5249999999999999,0.36,0.19,0.55,0.64,0.6496517296421926,253.86,0.0,-0.7000000000000001
+2000,axis5_default_scorer,axis5_default_scorer_seed2000,latest_200000_steps.zip,0.5,0.24,0.43,0.5,0.7017286114090784,265.93,-0.42,0.44,0.21,0.49,0.56,0.67444077477386,270.86,0.0,-0.54
+3000,axis5_default_scorer,axis5_default_scorer_seed3000,latest_300000_steps.zip,0.49,0.28,0.46,0.51,0.6930649856337232,239.9,-0.5050000000000001,0.48,0.22,0.46,0.52,0.7059677474339459,229.51,0.0,-0.46
+4000,axis5_default_scorer,axis5_default_scorer_seed4000,final.zip,0.46,0.21,0.45,0.54,0.703403507789782,270.91,-0.47000000000000003,0.45,0.29,0.45,0.55,0.6950744038301464,270.91,0.0,-0.565
+42,axis5_near_failure_scorer,axis5_near_failure_scorer_seed42,latest_100000_steps.zip,0.51,0.3,0.31,0.49,0.709586497690929,238.41,-0.345,0.44,0.3,0.43,0.56,0.6610046022952875,257.49,0.0,-0.5700000000000001
+2000,axis5_near_failure_scorer,axis5_near_failure_scorer_seed2000,latest_100000_steps.zip,0.47,0.1,0.48,0.53,0.7241572088765816,239.91,-0.375,0.36,0.25,0.48,0.64,0.6602305991675996,269.61,0.0,-0.69
+3000,axis5_near_failure_scorer,axis5_near_failure_scorer_seed3000,latest_200000_steps.zip,0.56,0.28,0.52,0.44,0.7016770603583717,256.22,-0.45999999999999996,0.49,0.21,0.5,0.51,0.7076998012342949,240.54,0.0,-0.475
+4000,axis5_near_failure_scorer,axis5_near_failure_scorer_seed4000,latest_100000_steps.zip,0.55,0.29,0.32,0.45,0.715482693420563,236.31,-0.2849999999999999,0.52,0.28,0.37,0.49,0.7199034813177626,243.47,0.0,-0.375

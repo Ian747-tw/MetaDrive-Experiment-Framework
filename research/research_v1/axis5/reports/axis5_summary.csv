@@ -1,0 +1,3 @@
+variant,n_seeds,seeds,success_rate_mean,success_rate_std,collision_rate_mean,collision_rate_std,offroad_rate_mean,offroad_rate_std,timeout_rate_mean,timeout_rate_std,route_completion_mean_mean,route_completion_mean_std,episode_cost_mean_mean,episode_cost_mean_std,cost_violation_rate_mean,cost_violation_rate_std,safety_efficiency_score_mean,safety_efficiency_score_std
+axis5_default_scorer,4,42|2000|3000|4000,0.4325,0.0512,0.2275,0.0435,0.4875,0.045,0.5675,0.0512,0.6813,0.0248,256.285,19.5713,0.0,0.0,-0.5663,0.0998
+axis5_near_failure_scorer,4,42|2000|3000|4000,0.4525,0.0699,0.26,0.0392,0.445,0.058,0.55,0.0668,0.6872,0.0311,252.7775,13.4403,0.0,0.0,-0.5275,0.1344
