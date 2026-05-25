@@ -1,34 +1,36 @@
-# Axis 2 Package Skeleton: Sampler Ablation
+# Axis 2 Package: Sampler Ablation
 
-Fill this folder after Axis 2 runs.
+Axis 2 studies the failure-aware sampler by varying the failure replay ratio while keeping the stable FASB optimizer, base checkpoint, large failure buffer, cost, safety budget, and penalty schedule fixed.
 
-Allowed research variable:
+## Current Status
+
+Axis 2 currently contains a single-seed final screen over replay ratios:
 
 ```text
-sampler._target_
-sampler.failure_ratio
-sampler.alpha
+seed: 2000
+variants: mixed005, mixed030, mixed060, mixed090
 ```
 
-Keep the stable protocol fixed unless the Axis 2 report explicitly justifies a screening run:
+The result is useful as an ablation screen, but it is not a multiseed final claim.
+
+## Contents
 
 ```text
-learning_rate=0.00003
-training.total_timesteps=300000 for final configs
-base checkpoint=runs/research_v1/base_pretrain_s42/checkpoints/final.zip
-failure buffer=runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl
-safety_budget.d_min=0.10
-safety_budget.d_max=0.30
-safety_budget.timeout_budget=0.30
-penalty_scheduler.lambda_min=0.0
-penalty_scheduler.lambda_max=0.25
-```
-
-Expected subfolders:
-
-```text
+configs/templates/
+configs/resolved_train/
+configs/resolved_eval/
+results/final_eval/
+results/summary/
 reports/
-configs/
-results/
-others/
 ```
+
+## Main Result
+
+| variant | failure ratio | success | collision | offroad | timeout | route | cost | safety-eff |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| mixed005 | 0.05 | 0.48 | 0.28 | 0.49 | 0.52 | 0.7067 | 260.50 | -0.550 |
+| mixed030 | 0.30 | 0.47 | 0.28 | 0.44 | 0.53 | 0.6978 | 239.82 | -0.515 |
+| mixed060 | 0.60 | 0.35 | 0.18 | 0.59 | 0.65 | 0.6298 | 277.59 | -0.745 |
+| mixed090 | 0.90 | 0.42 | 0.25 | 0.48 | 0.58 | 0.7004 | 253.22 | -0.600 |
+
+Interpretation: moderate replay (`0.30`) is best on this single seed by safety-efficiency and cost. High replay (`0.60`) hurts progress and increases timeout/offroad, showing that failure replay can become counterproductive if it dominates training.

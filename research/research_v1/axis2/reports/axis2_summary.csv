@@ -1,0 +1,9 @@
+block,block_trains,method,n_seeds,success_rate_mean,success_rate_std,collision_rate_mean,collision_rate_std,offroad_rate_mean,offroad_rate_std,timeout_rate_mean,timeout_rate_std,route_completion_mean_mean,route_completion_mean_std,episode_cost_mean_mean,episode_cost_mean_std,safety_efficiency_score_mean,safety_efficiency_score_std
+6_train_first3,6,mixed005,1,0.48,,0.28,,0.49,,0.52,,0.7066629388176271,,260.5,,-0.55,
+6_train_first3,6,mixed030,1,0.47,,0.28,,0.44,,0.53,,0.6978385433350917,,239.82,,-0.5150000000000001,
+6_train_first3,6,mixed060,1,0.35,,0.18,,0.59,,0.65,,0.6297815623310021,,277.59,,-0.745,
+6_train_first3,6,mixed090,1,0.42,,0.25,,0.48,,0.58,,0.7003562557136677,,253.22,,-0.6,
+12_train_all6,12,mixed005,1,0.48,,0.28,,0.49,,0.52,,0.7066629388176271,,260.5,,-0.55,
+12_train_all6,12,mixed030,1,0.47,,0.28,,0.44,,0.53,,0.6978385433350917,,239.82,,-0.5150000000000001,
+12_train_all6,12,mixed060,1,0.35,,0.18,,0.59,,0.65,,0.6297815623310021,,277.59,,-0.745,
+12_train_all6,12,mixed090,1,0.42,,0.25,,0.48,,0.58,,0.7003562557136677,,253.22,,-0.6,
