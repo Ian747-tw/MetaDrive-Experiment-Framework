@@ -1,0 +1,6 @@
+metric=safety_efficiency_score
+best_variant=fixed005
+best_value=-0.12500000000000006
+best_train_run=axis3_fixed005_s42_rep08
+best_eval_run=eval_axis3_fixed005_s42_rep08
+heldout_csv=runs/research_v1/eval_axis3_fixed005_s42_rep08/eval/heldout_random.csv
