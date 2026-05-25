@@ -1,0 +1,6 @@
+failure_mode,episodes,success_rate,collision_rate,offroad_rate,cost_mean
+collision,18,0.2777777777777778,1.0,0.8888888888888888,328.8888888888889
+offroad,32,0.125,0.0,1.0,354.84375
+solved,37,1.0,0.0,0.0,83.45945945945945
+timeout_or_hesitation,11,0.0,0.0,0.0,334.6363636363636
+unknown,2,0.0,0.0,0.0,313.0

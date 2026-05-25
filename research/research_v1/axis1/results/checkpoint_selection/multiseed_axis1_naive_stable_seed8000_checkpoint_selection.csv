@@ -1,0 +1,5 @@
+checkpoint,selected,hard_reject,reject_reasons,n_episodes,success_rate,collision_rate,offroad_rate,timeout_rate,route_completion_mean,episode_reward_mean,episode_modified_reward_mean,episode_cost_mean,cost_violation_rate,avg_episode_length,safety_efficiency_score
+runs/research_v1/multiseed_axis1_naive_stable_seed8000/checkpoints/latest_100000_steps.zip,False,False,,100.0,0.46,0.33,0.43,0.54,0.6774199991184733,-758.1137506018956,-758.1137506018956,251.32,0.0,427.89,-0.5700000000000001
+runs/research_v1/multiseed_axis1_naive_stable_seed8000/checkpoints/latest_200000_steps.zip,False,False,,100.0,0.45,0.22,0.43,0.55,0.6730200102075092,-707.6143199789835,-707.6143199789835,235.28,0.0,418.25,-0.475
+runs/research_v1/multiseed_axis1_naive_stable_seed8000/checkpoints/latest_300000_steps.zip,True,False,,100.0,0.54,0.24,0.45,0.46,0.7227837722191502,-694.3445646733119,-694.3445646733119,250.55,0.0,412.08,-0.38
+runs/research_v1/multiseed_axis1_naive_stable_seed8000/checkpoints/final.zip,False,False,,100.0,0.45,0.23,0.48,0.55,0.6711604562196279,-780.7242529251723,-780.7242529251723,273.25,0.0,418.95,-0.535
