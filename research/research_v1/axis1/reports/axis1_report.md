@@ -28,8 +28,8 @@ All active final comparisons use:
 
 | item | value |
 | --- | --- |
-| Base checkpoint | `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
-| Canonical failure buffer | `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
+| Base checkpoint | GitHub release artifact; local after download: `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
+| Canonical failure buffer | GitHub release artifact; local after download: `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
 | Fine-tuning steps | `300000` |
 | Learning rate | `0.00003` |
 | Vec env | `dummy`, `n_envs=1` |

@@ -31,8 +31,8 @@ default driving cost.
 
 | Item | Value |
 |---|---|
-| Base checkpoint | `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
-| Failure buffer | `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
+| Base checkpoint | GitHub release artifact; local after download: `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
+| Failure buffer | GitHub release artifact; local after download: `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
 | Fine-tuning steps | 300,000 |
 | Training seeds | 42, 2000, 3000 (RNG seed varied; training `start_seed=2000` fixed) |
 | Sampler | `MixedFailureSampler`, `failure_ratio=0.05`, `alpha=0.7`, `max_too_hard_ratio=0.15` |

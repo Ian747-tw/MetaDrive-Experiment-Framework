@@ -8,8 +8,8 @@ Axis 2 asks whether increasing the failure-buffer replay ratio improves safety-s
 
 | item | value |
 | --- | --- |
-| Base checkpoint | `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
-| Failure buffer | `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
+| Base checkpoint | GitHub release artifact; local after download: `runs/research_v1/base_pretrain_s42/checkpoints/final.zip` |
+| Failure buffer | GitHub release artifact; local after download: `runs/research_v1/base_explore_large/buffers/failure_buffer.jsonl` |
 | Training steps | `300000` |
 | Optimizer | SB3 PPO, `learning_rate=0.00003` |
 | Cost | `DefaultDrivingCost` |
